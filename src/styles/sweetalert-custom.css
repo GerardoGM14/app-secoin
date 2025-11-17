@@ -1,0 +1,44 @@
+/* Estilos personalizados para SweetAlert2 */
+.swal-confirm-button {
+  background: linear-gradient(to right, #ef4444, #dc2626) !important;
+  border: none !important;
+  color: white !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s !important;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2) !important;
+}
+
+.swal-confirm-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px -2px rgba(239, 68, 68, 0.3) !important;
+}
+
+.swal-cancel-button {
+  background: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  color: #4b5563 !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s !important;
+}
+
+.swal-cancel-button:hover {
+  background: #e5e7eb !important;
+}
+
+/* Animación para el modal de SweetAlert */
+.swal2-popup {
+  animation: swal2-show 0.3s !important;
+}
+
+.swal2-icon {
+  margin: 1.5em auto 0.6em !important;
+}
+
+.swal2-title {
+  font-size: 1.5em !important;
+  margin-bottom: 0.5em !important;
+}
