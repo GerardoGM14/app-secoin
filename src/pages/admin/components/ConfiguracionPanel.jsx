@@ -6,7 +6,8 @@ import { db, storage } from "../../../firebase/firebaseConfig"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from "sweetalert2"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import { XCircleIcon } from "@heroicons/react/24/solid"
 
 const PIN_VALIDO = "140603"
 
@@ -23,6 +24,9 @@ function ConfiguracionPanel({ visible, empresaId }) {
   const [logoPreview, setLogoPreview] = useState(null)
   const inputRef = useRef()
   const [ruc, setRuc] = useState("")
+  const [mostrarModalPin, setMostrarModalPin] = useState(false)
+  const [mostrarModalErrorPin, setMostrarModalErrorPin] = useState(false)
+  const [pinInput, setPinInput] = useState("")
 
   const [tabActiva, setTabActiva] = useState("sistema")
   const navigate = useNavigate()
@@ -499,26 +503,9 @@ function ConfiguracionPanel({ visible, empresaId }) {
                   {/* Si YA está validado, muestra botón EDITAR */}
                   {empresa?.rucValidado && (
                     <button
-                      onClick={async () => {
-                        const { value: pin } = await Swal.fire({
-                          title: "PIN requerido",
-                          input: "password",
-                          inputPlaceholder: "••••",
-                          showCancelButton: true,
-                          confirmButtonText: "Desbloquear",
-                          inputAttributes: {
-                            maxlength: 6,
-                            autocapitalize: "off",
-                            autocorrect: "off",
-                          },
-                        })
-
-                        if (pin === "140603") {
-                          setEmpresa((prev) => ({ ...prev, rucValidado: false }))
-                          Swal.fire("Desbloqueado", "Ahora puedes editar el RUC.", "success")
-                        } else if (pin) {
-                          Swal.fire("Error", "PIN incorrecto.", "error")
-                        }
+                      onClick={() => {
+                        setMostrarModalPin(true)
+                        setPinInput("")
                       }}
                       className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-4 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
@@ -610,6 +597,151 @@ function ConfiguracionPanel({ visible, empresaId }) {
           </motion.div>
         )}
       </div>
+
+      {/* Modal de PIN para desbloquear RUC */}
+      <AnimatePresence>
+        {mostrarModalPin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
+            onClick={() => {
+              setMostrarModalPin(false)
+              setPinInput("")
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="bg-red-100 text-red-700 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">PIN requerido</h3>
+                  <p className="text-gray-600 text-sm">Ingresa el PIN para desbloquear el RUC</p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PIN de autorización</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <input
+                      type="password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="••••••"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-lg tracking-widest bg-gray-50/50"
+                      maxLength="6"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setMostrarModalPin(false)
+                      setPinInput("")
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (pinInput === "140603") {
+                        setEmpresa((prev) => ({ ...prev, rucValidado: false }))
+                        setMostrarModalPin(false)
+                        setPinInput("")
+                        Swal.fire("Desbloqueado", "Ahora puedes editar el RUC.", "success")
+                      } else if (pinInput) {
+                        setMostrarModalErrorPin(true)
+                        setPinInput("")
+                      }
+                    }}
+                    disabled={pinInput.length !== 6}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    Desbloquear
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Error PIN */}
+      <AnimatePresence>
+        {mostrarModalErrorPin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalErrorPin(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Error</h3>
+                  <p className="text-sm text-gray-500">PIN incorrecto</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  El PIN ingresado no es válido. Por favor, intenta nuevamente.
+                </p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalErrorPin(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

@@ -11,6 +11,7 @@ import Registro from "./pages/Registro"
 // Admin Dashboard y componentes
 import AdminDashboard from "./pages/admin/Dashboard"
 import Configuracion from "./pages/admin/Configuracion"
+import Monitoreo from "./pages/admin/Monitoreo"
 import CursoDetalle from "./pages/admin/components/capacitacion/CursoDetalle"
 import Evaluacion from "./pages/admin/components/capacitacion/Evaluacion"
 import InspeccionPanel from "./pages/admin/components/inspeccion/InspeccionPanel"
@@ -32,6 +33,7 @@ import EvaluacionTrabajador from "./pages/trabajador/EvaluacionTrabajador"
 // Páginas públicas
 import RegistroTrabajadorPublico from "./pages/publico/RegistroTrabajadorPublico"
 import CertificadoPorId from "./pages/publico/CertificadoPorId"
+import EvaluacionPublica from "./pages/publico/EvaluacionPublica"
 
 // Validación y certificados
 import ValidarCertificado from "./pages/validacion/ValidarCertificado"
@@ -40,6 +42,9 @@ import ValidarCertificadoPrueba from "./pages/validacion/ValidarCertificadoPrueb
 // Certificados Demo - NUEVA IMPORTACIÓN
 import CertificadosDemo from "./pages/components/certificados/CertificadosDemo"
 import CertificadoVista from "./pages/components/certificados/CertificadoEditor"
+
+// Componente de geolocalización global
+import GeolocalizacionTracker from "./components/GeolocalizacionTracker"
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
@@ -51,6 +56,8 @@ function App() {
 
   return (
     <Router>
+      {/* Componente de geolocalización global */}
+      {usuario && <GeolocalizacionTracker />}
       <Routes>
         {/* ================================ */}
         {/* RUTAS PÚBLICAS */}
@@ -62,6 +69,9 @@ function App() {
 
         {/* Registro público de trabajadores */}
         <Route path="/registro-trabajador/:pin" element={<RegistroTrabajadorPublico />} />
+
+        {/* Evaluación pública */}
+        <Route path="/evaluacion-publica/:cursoId/:cuestionarioId" element={<EvaluacionPublica />} />
 
         {/* Validación de certificados - PÚBLICAS */}
         <Route path="/validar-certificado" element={<ValidarCertificado />} />
@@ -98,6 +108,7 @@ function App() {
                 {/* Otros módulos Admin */}
                 <Route path="inspeccion" element={<InspeccionPanel />} />
                 <Route path="informes" element={<InformesPanel />} />
+                <Route path="monitoreo" element={<Monitoreo />} />
 
                 {/* Certificados Admin */}
                 <Route path="generar-certificado" element={<GenerarCertificadoPrueba />} />

@@ -8,6 +8,7 @@ import Swal from "sweetalert2"
 import QRCode from "qrcode"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid"
 
 function CertificadoGenerator({
   mostrar,
@@ -19,9 +20,15 @@ function CertificadoGenerator({
   pinEmpresa,
 }) {
   const [qrCodeUrl, setQrCodeUrl] = useState("")
+  const [qrCodeIdUrl, setQrCodeIdUrl] = useState("") // QR con el ID del certificado
   const [certificadoId, setCertificadoId] = useState("")
   const [generando, setGenerando] = useState(false)
   const [descargando, setDescargando] = useState(false)
+  const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [mostrarModalError, setMostrarModalError] = useState(false)
+  const [mostrarModalDescarga, setMostrarModalDescarga] = useState(false)
+  const [validandoDescarga, setValidandoDescarga] = useState(false)
+  const [mensajeError, setMensajeError] = useState("")
   const certificadoRef = useRef()
 
   console.log("🏆 CertificadoGenerator - Iniciando")
@@ -69,7 +76,7 @@ function CertificadoGenerator({
       // URL para validación del QR
       const urlValidacion = `${window.location.origin}/validar-certificado/${idCertificado}`
 
-      // Generar código QR
+      // Generar código QR para validación (URL)
       const qrUrl = await QRCode.toDataURL(urlValidacion, {
         width: 200,
         margin: 2,
@@ -81,22 +88,27 @@ function CertificadoGenerator({
       setQrCodeUrl(qrUrl)
       console.log("🔗 QR generado para:", urlValidacion)
 
-      Swal.fire({
-        title: "🎉 ¡Certificado Generado!",
-        text: "Tu certificado ha sido creado exitosamente",
-        icon: "success",
-        confirmButtonColor: "#dc2626",
-        timer: 2000,
-        showConfirmButton: false,
+      // Generar código QR pequeño con el ID del certificado
+      const qrIdUrl = await QRCode.toDataURL(idCertificado, {
+        width: 100,
+        margin: 1,
+        color: {
+          dark: "#000000",
+          light: "#ffffff",
+        },
       })
+      setQrCodeIdUrl(qrIdUrl)
+      console.log("🆔 QR ID generado para:", idCertificado)
+
+      // Mostrar modal de éxito
+      setMostrarModalExito(true)
+      setTimeout(() => {
+        setMostrarModalExito(false)
+      }, 2000)
     } catch (error) {
       console.error("❌ Error al generar certificado:", error)
-      Swal.fire({
-        title: "Error",
-        text: "No se pudo generar el certificado",
-        icon: "error",
-        confirmButtonColor: "#dc2626",
-      })
+      setMensajeError("No se pudo generar el certificado")
+      setMostrarModalError(true)
     } finally {
       setGenerando(false)
     }
@@ -109,6 +121,19 @@ function CertificadoGenerator({
     try {
       console.log("📄 Generando PDF...")
 
+      // Agregar clase para ajustar posicionamiento durante la captura
+      // Mover el contenido principal 8px hacia arriba para compensar diferencia en PDF
+      const contenidoPrincipal = certificadoRef.current.querySelector('.contenido-principal-certificado')
+      if (contenidoPrincipal) {
+        contenidoPrincipal.style.transform = 'translateY(-8px)'
+      }
+
+      // Mover el nombre del usuario un poco más arriba (12px)
+      const nombreUsuario = certificadoRef.current.querySelector('.nombre-usuario-certificado')
+      if (nombreUsuario) {
+        nombreUsuario.style.transform = 'translateY(-12px)'
+      }
+
       // Capturar el certificado como imagen
       const canvas = await html2canvas(certificadoRef.current, {
         scale: 2,
@@ -116,6 +141,14 @@ function CertificadoGenerator({
         allowTaint: true,
         backgroundColor: "#ffffff",
       })
+
+      // Restaurar los estilos originales después de la captura
+      if (contenidoPrincipal) {
+        contenidoPrincipal.style.transform = ''
+      }
+      if (nombreUsuario) {
+        nombreUsuario.style.transform = ''
+      }
 
       // Crear PDF
       const imgData = canvas.toDataURL("image/png")
@@ -130,31 +163,29 @@ function CertificadoGenerator({
 
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight)
 
-      // Nombre del archivo
-      const nombreArchivo = `Certificado_${datosUsuario.nombreUsuario.replace(/\s+/g, "_")}_${datosCurso.titulo.replace(
-        /\s+/g,
-        "_",
-      )}.pdf`
+      // Nombre del archivo: código QR
+      const nombreArchivo = `${certificadoId}.pdf`
 
       pdf.save(nombreArchivo)
       console.log("✅ PDF descargado:", nombreArchivo)
 
-      Swal.fire({
-        title: "📄 Descarga Completada",
-        text: "El certificado se ha descargado exitosamente",
-        icon: "success",
-        confirmButtonColor: "#dc2626",
-        timer: 2000,
-        showConfirmButton: false,
-      })
+      // Mostrar animación de validación primero
+      setValidandoDescarga(true)
+      setMostrarModalDescarga(true)
+      
+      // Después de 1.5 segundos, mostrar el éxito
+      setTimeout(() => {
+        setValidandoDescarga(false)
+      }, 1500)
+      
+      // Cerrar el modal después de 3 segundos
+      setTimeout(() => {
+        setMostrarModalDescarga(false)
+      }, 3000)
     } catch (error) {
       console.error("❌ Error al descargar PDF:", error)
-      Swal.fire({
-        title: "Error",
-        text: "No se pudo descargar el certificado",
-        icon: "error",
-        confirmButtonColor: "#dc2626",
-      })
+      setMensajeError("No se pudo descargar el certificado")
+      setMostrarModalError(true)
     } finally {
       setDescargando(false)
     }
@@ -221,10 +252,167 @@ function CertificadoGenerator({
     })
   }
 
+  const obtenerDiaMes = (fecha) => {
+    if (!fecha) return ""
+    try {
+      let fechaObj
+      if (fecha.toDate) {
+        // Es un Timestamp de Firestore
+        fechaObj = fecha.toDate()
+      } else if (typeof fecha === "string") {
+        // Es un string de fecha
+        fechaObj = new Date(fecha)
+      } else if (fecha instanceof Date) {
+        // Ya es un objeto Date
+        fechaObj = fecha
+      } else {
+        // Intentar parsear como fecha
+        fechaObj = new Date(fecha)
+      }
+      
+      // Validar que la fecha es válida
+      if (isNaN(fechaObj.getTime())) {
+        console.warn("Fecha inválida:", fecha)
+        const hoy = new Date()
+        return hoy.toLocaleDateString("es-PE", { month: "long", day: "numeric" })
+      }
+      
+      // Retornar formato "Diciembre, 17"
+      return fechaObj.toLocaleDateString("es-PE", { month: "long", day: "numeric" })
+    } catch (error) {
+      console.error("Error al obtener día:", error)
+      const hoy = new Date()
+      return hoy.toLocaleDateString("es-PE", { month: "long", day: "numeric" })
+    }
+  }
+
   if (!mostrar) return null
 
   return (
-    <AnimatePresence>
+    <>
+      {/* Modal de Certificado Generado */}
+      <AnimatePresence>
+        {mostrarModalExito && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="rounded-2xl shadow-2xl max-w-md w-full p-6 border"
+              style={{ backgroundColor: "hsl(0, 0%, 100%)", borderColor: "hsl(210, 16%, 93%)" }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 rounded-full mb-4" style={{ backgroundColor: "hsl(142, 76%, 94%)" }}>
+                  <CheckCircleIcon className="h-8 w-8" style={{ color: "hsl(142, 71%, 45%)" }} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: "hsl(210, 11%, 15%)" }}>
+                  ¡Certificado Generado!
+                </h3>
+                <p className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>
+                  Tu certificado ha sido creado exitosamente
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Descarga Completada */}
+      <AnimatePresence>
+        {mostrarModalDescarga && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="rounded-2xl shadow-2xl max-w-md w-full p-6 border"
+              style={{ backgroundColor: "hsl(0, 0%, 100%)", borderColor: "hsl(210, 16%, 93%)" }}
+            >
+              <div className="flex flex-col items-center text-center">
+                {validandoDescarga ? (
+                  <>
+                    <div className="p-3 rounded-full mb-4" style={{ backgroundColor: "hsl(142, 76%, 94%)" }}>
+                      <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(142, 71%, 45%)" }}></div>
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: "hsl(210, 11%, 15%)" }}>
+                      Validando descarga...
+                    </h3>
+                    <p className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>
+                      Verificando que el certificado se haya descargado correctamente
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 rounded-full mb-4" style={{ backgroundColor: "hsl(142, 76%, 94%)" }}>
+                      <CheckCircleIcon className="h-8 w-8" style={{ color: "hsl(142, 71%, 45%)" }} />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2" style={{ color: "hsl(210, 11%, 15%)" }}>
+                      ¡Descarga Completada!
+                    </h3>
+                    <p className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>
+                      El certificado se ha descargado exitosamente
+                    </p>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Error */}
+      <AnimatePresence>
+        {mostrarModalError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="rounded-2xl shadow-2xl max-w-md w-full p-6 border"
+              style={{ backgroundColor: "hsl(0, 0%, 100%)", borderColor: "hsl(210, 16%, 93%)" }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 rounded-full mb-4" style={{ backgroundColor: "hsl(0, 78%, 97%)" }}>
+                  <XCircleIcon className="h-8 w-8" style={{ color: "hsl(0, 72%, 51%)" }} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: "hsl(210, 11%, 15%)" }}>
+                  Error
+                </h3>
+                <p className="text-sm mb-6" style={{ color: "hsl(210, 9%, 31%)" }}>
+                  {mensajeError}
+                </p>
+                <button
+                  onClick={() => setMostrarModalError(false)}
+                  className="w-full px-4 py-2 text-white rounded-lg transition-colors font-medium"
+                  style={{ backgroundColor: "hsl(0, 72%, 51%)" }}
+                  onMouseEnter={(e) => (e.target.style.backgroundColor = "hsl(0, 74%, 42%)")}
+                  onMouseLeave={(e) => (e.target.style.backgroundColor = "hsl(0, 72%, 51%)")}
+                >
+                  OK
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal principal del certificado */}
+      <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -242,7 +430,7 @@ function CertificadoGenerator({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-4 flex justify-between items-center">
+          <div className="text-white p-4 flex justify-between items-center" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}>
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -317,36 +505,67 @@ function CertificadoGenerator({
           </div>
 
           {/* Contenido del certificado */}
-          <div className="p-6 bg-gray-50 overflow-y-auto max-h-[calc(100vh-200px)]">
+          <div className="p-6 overflow-y-auto max-h-[calc(100vh-200px)]" style={{ backgroundColor: "hsl(210, 20%, 98%)" }}>
             {generando ? (
               <div className="flex flex-col items-center justify-center h-64">
-                <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-600 font-medium">Generando certificado...</p>
+                <div className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: "hsl(0, 84%, 60%)" }}></div>
+                <p className="font-medium" style={{ color: "hsl(210, 9%, 31%)" }}>Generando certificado...</p>
               </div>
             ) : (
               <div className="flex justify-center">
                 {/* Certificado */}
                 <div
                   ref={certificadoRef}
-                  className="bg-white shadow-2xl rounded-lg overflow-hidden"
-                  style={{ width: "842px", height: "595px" }} // A4 landscape
+                  className="shadow-2xl rounded-lg overflow-hidden"
+                  style={{ backgroundColor: "hsl(0, 0%, 100%)", width: "842px", height: "595px" }} // A4 landscape
                 >
                   {/* Borde decorativo */}
-                  <div className="h-full relative bg-gradient-to-br from-red-50 to-rose-100 p-8">
-                    <div className="h-full border-4 border-red-600 rounded-lg relative bg-white p-8">
+                  <div className="h-full relative p-8" style={{ backgroundColor: "hsl(0, 78%, 97%)" }}>
+                    <div className="h-full border-4 rounded-lg relative p-8" style={{ borderColor: "hsl(0, 72%, 51%)", backgroundColor: "hsl(0, 0%, 100%)" }}>
                       {/* Patrón de fondo */}
                       <div className="absolute inset-0 opacity-5">
-                        <div className="absolute top-4 left-4 w-32 h-32 bg-red-600 rounded-full"></div>
-                        <div className="absolute bottom-4 right-4 w-24 h-24 bg-red-600 rounded-full"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-red-600 rounded-full"></div>
+                        <div className="absolute top-4 left-4 w-32 h-32 rounded-full" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}></div>
+                        <div className="absolute bottom-4 right-4 w-24 h-24 rounded-full" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}></div>
                       </div>
 
                       {/* Contenido del certificado */}
                       <div className="relative z-10 h-full flex flex-col">
+                        {/* Cuadro rojo superior izquierdo - Logo */}
+                        <div className="absolute top-0 left-0 p-4 rounded-br-lg" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}>
+                          <div className="flex flex-col items-center">
+                            {/* Espacio para Logo */}
+                            <div className="w-20 h-20 rounded flex items-center justify-center" style={{ backgroundColor: "hsla(0, 0%, 100%, 0.2)" }}>
+                              {/* Aquí irá el logo - usar img tag cuando esté disponible */}
+                              {/* <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" /> */}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Cuadro rojo superior derecho - QR */}
+                        <div className="absolute top-0 right-0 p-4 rounded-bl-lg" style={{ backgroundColor: "hsl(0, 72%, 51%)" }}>
+                          <div className="flex flex-col items-center">
+                            {/* QR pequeño con ID del certificado */}
+                            {qrCodeIdUrl && (
+                              <div className="flex flex-col items-center">
+                                <img
+                                  src={qrCodeIdUrl}
+                                  alt="QR ID Certificado"
+                                  className="w-16 h-16 p-1 rounded"
+                                  style={{ backgroundColor: "hsl(0, 0%, 100%)" }}
+                                />
+                                <p className="text-xs text-white font-mono mt-1 text-center max-w-[80px] break-all">
+                                  {certificadoId}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Header */}
-                        <div className="text-center mb-6">
-                          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-600 rounded-full mb-4">
-                            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="text-center mb-6" style={{ position: "relative", zIndex: 20 }}>
+                          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style={{ backgroundColor: "hsl(0, 72%, 51%)", position: "relative", zIndex: 21 }}>
+                            <svg className="w-10 h-10" style={{ color: "hsl(0, 0%, 100%)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
@@ -355,44 +574,44 @@ function CertificadoGenerator({
                               />
                             </svg>
                           </div>
-                          <h1 className="text-4xl font-bold text-red-600 mb-2">CERTIFICADO</h1>
-                          <p className="text-lg text-gray-600">DE CAPACITACIÓN</p>
+                          <h1 className="text-4xl font-bold mb-2" style={{ color: "hsl(0, 72%, 51%)" }}>CERTIFICADO</h1>
+                          <p className="text-lg" style={{ color: "hsl(210, 9%, 31%)" }}>DE CAPACITACIÓN</p>
                         </div>
 
                         {/* Contenido principal */}
-                        <div className="flex-1 flex flex-col justify-center text-center">
-                          <p className="text-lg text-gray-700 mb-4">Se certifica que</p>
+                        <div className="flex-1 flex flex-col justify-center text-center contenido-principal-certificado">
+                          <p className="text-lg mb-4" style={{ color: "hsl(210, 10%, 23%)" }}>Se certifica que</p>
 
-                          <h2 className="text-3xl font-bold text-gray-900 mb-2 border-b-2 border-red-600 pb-2 inline-block">
+                          <h2 className="text-3xl font-bold mb-2 border-b-2 inline-block nombre-usuario-certificado" style={{ borderColor: "hsl(0, 72%, 51%)", color: "hsl(210, 11%, 15%)", paddingBottom: "12px" }}>
                             {datosUsuario.nombreUsuario}
                           </h2>
 
-                          <p className="text-base text-gray-600 mb-6">
+                          <p className="text-base mb-6" style={{ color: "hsl(210, 9%, 31%)" }}>
                             DNI: {datosUsuario.dniUsuario} | Cargo: {datosUsuario.cargoUsuario}
                           </p>
 
-                          <p className="text-lg text-gray-700 mb-2">ha completado exitosamente la capacitación</p>
+                          <p className="text-lg mb-2" style={{ color: "hsl(210, 10%, 23%)" }}>ha completado exitosamente la capacitación</p>
 
-                          <h3 className="text-2xl font-bold text-red-600 mb-4">"{datosCurso.titulo}"</h3>
+                          <h3 className="text-2xl font-bold mb-4" style={{ color: "hsl(0, 72%, 51%)" }}>"{datosCurso.titulo}"</h3>
 
                           <div className="grid grid-cols-3 gap-8 mb-6">
                             <div className="text-center">
-                              <div className="text-2xl font-bold text-red-600">{notaObtenida}</div>
-                              <div className="text-sm text-gray-600">Nota Obtenida</div>
+                              <div className="text-2xl font-bold" style={{ color: "hsl(0, 72%, 51%)" }}>{notaObtenida}</div>
+                              <div className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>Nota Obtenida</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-2xl font-bold text-red-600">
-                                {formatearFecha(fechaEvaluacion).split(" ")[0]}
+                              <div className="text-2xl font-bold" style={{ color: "hsl(0, 72%, 51%)" }}>
+                                {obtenerDiaMes(fechaEvaluacion)}
                               </div>
-                              <div className="text-sm text-gray-600">Día</div>
+                              <div className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>Día</div>
                             </div>
                             <div className="text-center">
-                              <div className="text-2xl font-bold text-red-600">{new Date().getFullYear()}</div>
-                              <div className="text-sm text-gray-600">Año</div>
+                              <div className="text-2xl font-bold" style={{ color: "hsl(0, 72%, 51%)" }}>{new Date().getFullYear()}</div>
+                              <div className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>Año</div>
                             </div>
                           </div>
 
-                          <p className="text-sm text-gray-600 mb-4">
+                          <p className="text-sm mb-4" style={{ color: "hsl(210, 9%, 31%)", marginTop: "-8px" }}>
                             Empresa: <span className="font-semibold">{datosUsuario.empresaUsuario}</span>
                           </p>
                         </div>
@@ -400,9 +619,9 @@ function CertificadoGenerator({
                         {/* Footer */}
                         <div className="flex justify-between items-end">
                           <div className="text-left">
-                            <div className="border-t-2 border-gray-400 pt-2 w-48">
-                              <p className="text-sm font-semibold text-gray-700">Instructor Certificado</p>
-                              <p className="text-xs text-gray-500">Sistema de Capacitaciones</p>
+                            <div className="border-t-2 pt-2 w-48" style={{ borderColor: "hsl(210, 13%, 75%)" }}>
+                              <p className="text-sm font-semibold" style={{ color: "hsl(210, 10%, 23%)" }}>Instructor Certificado</p>
+                              <p className="text-xs" style={{ color: "hsl(210, 8%, 46%)" }}>Sistema de Capacitaciones</p>
                             </div>
                           </div>
 
@@ -414,16 +633,16 @@ function CertificadoGenerator({
                                   alt="QR Code"
                                   className="w-20 h-20 mx-auto mb-2"
                                 />
-                                <p className="text-xs text-gray-500">Validar certificado</p>
-                                <p className="text-xs text-gray-400 font-mono">{certificadoId}</p>
+                                <p className="text-xs" style={{ color: "hsl(210, 8%, 46%)" }}>Validar certificado</p>
+                                <p className="text-xs font-mono" style={{ color: "hsl(210, 6%, 56%)" }}>{certificadoId}</p>
                               </div>
                             )}
                           </div>
 
                           <div className="text-right">
-                            <div className="border-t-2 border-gray-400 pt-2 w-48">
-                              <p className="text-sm font-semibold text-gray-700">{formatearFecha(fechaEvaluacion)}</p>
-                              <p className="text-xs text-gray-500">Fecha de emisión</p>
+                            <div className="border-t-2 pt-2 w-48" style={{ borderColor: "hsl(210, 13%, 75%)" }}>
+                              <p className="text-sm font-semibold" style={{ color: "hsl(210, 10%, 23%)" }}>{formatearFecha(fechaEvaluacion)}</p>
+                              <p className="text-xs" style={{ color: "hsl(210, 8%, 46%)" }}>Fecha de emisión</p>
                             </div>
                           </div>
                         </div>
@@ -436,8 +655,8 @@ function CertificadoGenerator({
           </div>
 
           {/* Botones de acción */}
-          <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+          <div className="border-t p-4 flex justify-between items-center" style={{ backgroundColor: "hsl(210, 20%, 98%)", borderColor: "hsl(210, 16%, 93%)" }}>
+            <div className="text-sm" style={{ color: "hsl(210, 9%, 31%)" }}>
               <span className="font-medium">Certificado válido</span> • Verificable mediante código QR
             </div>
 
@@ -445,7 +664,10 @@ function CertificadoGenerator({
               <button
                 onClick={compartirCertificado}
                 disabled={generando}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: "hsl(221, 83%, 53%)", color: "hsl(0, 0%, 100%)" }}
+                onMouseEnter={(e) => !generando && (e.target.style.backgroundColor = "hsl(221, 83%, 45%)")}
+                onMouseLeave={(e) => !generando && (e.target.style.backgroundColor = "hsl(221, 83%, 53%)")}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
@@ -461,7 +683,10 @@ function CertificadoGenerator({
               <button
                 onClick={descargarPDF}
                 disabled={generando || descargando}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: "hsl(0, 72%, 51%)" }}
+                onMouseEnter={(e) => !generando && !descargando && (e.target.style.backgroundColor = "hsl(0, 74%, 42%)")}
+                onMouseLeave={(e) => !generando && !descargando && (e.target.style.backgroundColor = "hsl(0, 72%, 51%)")}
               >
                 {descargando ? (
                   <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -489,6 +714,7 @@ function CertificadoGenerator({
         </motion.div>
       </motion.div>
     </AnimatePresence>
+    </>
   )
 }
 

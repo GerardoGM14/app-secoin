@@ -2,10 +2,12 @@
 
 // src/pages/admin/components/SeleccionEmpresaPanel.jsx
 import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db, storage } from "../../../firebase/firebaseConfig"
 import Swal from "sweetalert2"
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid"
 
 function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
   const [empresas, setEmpresas] = useState([])
@@ -16,6 +18,19 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
   const [showEditButton, setShowEditButton] = useState(null)
   const [busqueda, setBusqueda] = useState("")
   const [ordenamiento, setOrdenamiento] = useState("alfabetico") // "alfabetico", "fecha", "id"
+  
+  // Estados para modales de PIN
+  const [mostrarModalPinSeleccionar, setMostrarModalPinSeleccionar] = useState(false)
+  const [mostrarModalPinEliminar, setMostrarModalPinEliminar] = useState(false)
+  const [mostrarModalPinEditar, setMostrarModalPinEditar] = useState(false)
+  const [mostrarModalLogout, setMostrarModalLogout] = useState(false)
+  const [mostrarModalSeleccionado, setMostrarModalSeleccionado] = useState(false)
+  const [mostrarModalErrorPin, setMostrarModalErrorPin] = useState(false)
+  const [pinInput, setPinInput] = useState("")
+  const [empresaSeleccionadaTemp, setEmpresaSeleccionadaTemp] = useState(null)
+  const [empresaEliminarTemp, setEmpresaEliminarTemp] = useState(null)
+  const [empresaEditarTemp, setEmpresaEditarTemp] = useState(null)
+  const [loadingPin, setLoadingPin] = useState(false)
 
   useEffect(() => {
     const obtenerEmpresas = async () => {
@@ -36,81 +51,55 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
     obtenerEmpresas()
   }, [])
 
-  const seleccionarEmpresa = async (empresa) => {
-    const { value: pin } = await Swal.fire({
-      title: "Validación requerida",
-      input: "password",
-      inputPlaceholder: "Ingresa el PIN",
-      inputAttributes: { maxlength: 6 },
-      confirmButtonText: "Confirmar",
-      showCancelButton: true,
-      customClass: {
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
-      buttonsStyling: true,
-    })
+  const seleccionarEmpresa = (empresa) => {
+    setEmpresaSeleccionadaTemp(empresa)
+    setMostrarModalPinSeleccionar(true)
+    setPinInput("")
+  }
 
-    if (pin !== "140603") {
-      Swal.fire("Error", "PIN incorrecto", "error")
+  const confirmarSeleccionarEmpresa = async () => {
+    if (pinInput !== "140603") {
+      setMostrarModalErrorPin(true)
+      setPinInput("")
       return
     }
 
-    setEmpresaSeleccionada(empresa)
-    Swal.fire("Seleccionado", `Ahora estás gestionando a ${empresa.correo}`, "success")
+    setMostrarModalPinSeleccionar(false)
+    setEmpresaSeleccionada(empresaSeleccionadaTemp)
+    setPinInput("")
+    setMostrarModalSeleccionado(true)
   }
 
   const cerrarSesion = () => {
-    Swal.fire({
-      title: "¿Cerrar sesión?",
-      text: "Serás redirigido al login",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, salir",
-      cancelButtonText: "Cancelar",
-      customClass: {
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
-      buttonsStyling: true,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        window.location.href = "/"
-      }
-    })
+    setMostrarModalLogout(true)
   }
 
-  const eliminarEmpresa = async (empresa, event) => {
+  const confirmarCerrarSesion = () => {
+    setMostrarModalLogout(false)
+    window.location.href = "/"
+  }
+
+  const eliminarEmpresa = (empresa, event) => {
     event.stopPropagation() // Evitar que se ejecute seleccionarEmpresa
+    setEmpresaEliminarTemp(empresa)
+    setMostrarModalPinEliminar(true)
+    setPinInput("")
+  }
 
-    // Solicitar PIN
-    const { value: pin } = await Swal.fire({
-      title: "⚠️ Eliminar Empresa",
-      text: `¿Estás seguro de eliminar a ${empresa.correo}? Esta acción no se puede deshacer.`,
-      input: "password",
-      inputPlaceholder: "Ingresa el PIN de administrador",
-      inputAttributes: { maxlength: 6 },
-      confirmButtonText: "Eliminar",
-      cancelButtonText: "Cancelar",
-      showCancelButton: true,
-      icon: "warning",
-      confirmButtonColor: "#dc2626",
-      customClass: {
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
-      buttonsStyling: true,
-    })
-
-    if (pin !== "140603") {
-      Swal.fire("Error", "PIN incorrecto", "error")
+  const confirmarEliminarEmpresa = async () => {
+    if (pinInput !== "140603") {
+      setMostrarModalErrorPin(true)
+      setPinInput("")
       return
     }
+
+    setMostrarModalPinEliminar(false)
+    setPinInput("")
 
     // Confirmar eliminación
     const confirmacion = await Swal.fire({
       title: "Última confirmación",
-      text: `Se eliminará permanentemente a ${empresa.correo} de toda la base de datos`,
+      text: `Se eliminará permanentemente a ${empresaEliminarTemp.correo} de toda la base de datos`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Sí, eliminar",
@@ -127,14 +116,14 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
 
     try {
       // Eliminar de Firebase
-      await deleteDoc(doc(db, "usuarios", empresa.id))
+      await deleteDoc(doc(db, "usuarios", empresaEliminarTemp.id))
 
       // Actualizar la lista local
-      setEmpresas(empresas.filter((emp) => emp.id !== empresa.id))
+      setEmpresas(empresas.filter((emp) => emp.id !== empresaEliminarTemp.id))
 
       Swal.fire({
         title: "Eliminado",
-        text: `${empresa.correo} ha sido eliminado exitosamente`,
+        text: `${empresaEliminarTemp.correo} ha sido eliminado exitosamente`,
         icon: "success",
         confirmButtonColor: "#059669",
       })
@@ -144,32 +133,22 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
     }
   }
 
-  const editarEmpresa = async (empresa, event) => {
+  const editarEmpresa = (empresa, event) => {
     event.stopPropagation() // Evitar que se ejecute seleccionarEmpresa
+    setEmpresaEditarTemp(empresa)
+    setMostrarModalPinEditar(true)
+    setPinInput("")
+  }
 
-    // Solicitar PIN
-    const { value: pin } = await Swal.fire({
-      title: "🔐 Validación requerida",
-      text: `Editar imagen de ${empresa.correo}`,
-      input: "password",
-      inputPlaceholder: "Ingresa el PIN de administrador",
-      inputAttributes: { maxlength: 6 },
-      confirmButtonText: "Continuar",
-      cancelButtonText: "Cancelar",
-      showCancelButton: true,
-      icon: "question",
-      confirmButtonColor: "#3b82f6",
-      customClass: {
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
-      buttonsStyling: true,
-    })
-
-    if (pin !== "140603") {
-      Swal.fire("Error", "PIN incorrecto", "error")
+  const confirmarEditarEmpresa = async () => {
+    if (pinInput !== "140603") {
+      setMostrarModalErrorPin(true)
+      setPinInput("")
       return
     }
+
+    setMostrarModalPinEditar(false)
+    setPinInput("")
 
     // Crear input file
     const input = document.createElement("input")
@@ -198,21 +177,21 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
 
       try {
         // Subir imagen a Storage
-        const imageRef = ref(storage, `empresas/${empresa.id}/logo.${file.name.split(".").pop()}`)
+        const imageRef = ref(storage, `empresas/${empresaEditarTemp.id}/logo.${file.name.split(".").pop()}`)
         await uploadBytes(imageRef, file)
         const imageUrl = await getDownloadURL(imageRef)
 
         // Actualizar documento en Firestore
-        await updateDoc(doc(db, "usuarios", empresa.id), {
+        await updateDoc(doc(db, "usuarios", empresaEditarTemp.id), {
           logoUrl: imageUrl,
         })
 
         // Actualizar lista local
-        setEmpresas(empresas.map((emp) => (emp.id === empresa.id ? { ...emp, logoUrl: imageUrl } : emp)))
+        setEmpresas(empresas.map((emp) => (emp.id === empresaEditarTemp.id ? { ...emp, logoUrl: imageUrl } : emp)))
 
         Swal.fire({
           title: "¡Éxito!",
-          text: `Imagen de ${empresa.correo} actualizada correctamente`,
+          text: `Imagen de ${empresaEditarTemp.correo} actualizada correctamente`,
           icon: "success",
           confirmButtonColor: "#059669",
         })
@@ -643,6 +622,434 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
           )}
         </div>
       )}
+
+      {/* Modal de PIN para seleccionar empresa */}
+      <AnimatePresence>
+        {mostrarModalPinSeleccionar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
+            onClick={() => {
+              setMostrarModalPinSeleccionar(false)
+              setPinInput("")
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="bg-red-100 text-red-700 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Validación requerida</h3>
+                  <p className="text-gray-600 text-sm">Ingresa el PIN para seleccionar esta empresa</p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PIN de autorización</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <input
+                      type="password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="••••••"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-lg tracking-widest bg-gray-50/50"
+                      maxLength="6"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setMostrarModalPinSeleccionar(false)
+                      setPinInput("")
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarSeleccionarEmpresa}
+                    disabled={loadingPin || pinInput.length !== 6}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de PIN para eliminar empresa */}
+      <AnimatePresence>
+        {mostrarModalPinEliminar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
+            onClick={() => {
+              setMostrarModalPinEliminar(false)
+              setPinInput("")
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="bg-red-100 text-red-700 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Eliminar Empresa</h3>
+                  <p className="text-gray-600 text-sm">
+                    Ingresa el PIN de administrador para eliminar a {empresaEliminarTemp?.correo}
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PIN de autorización</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <input
+                      type="password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="••••••"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-lg tracking-widest bg-gray-50/50"
+                      maxLength="6"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setMostrarModalPinEliminar(false)
+                      setPinInput("")
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarEliminarEmpresa}
+                    disabled={loadingPin || pinInput.length !== 6}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de PIN para editar empresa */}
+      <AnimatePresence>
+        {mostrarModalPinEditar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4"
+            onClick={() => {
+              setMostrarModalPinEditar(false)
+              setPinInput("")
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="bg-red-100 text-red-700 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Validación requerida</h3>
+                  <p className="text-gray-600 text-sm">Ingresa el PIN para editar la imagen de {empresaEditarTemp?.correo}</p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PIN de autorización</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <input
+                      type="password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      placeholder="••••••"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-lg tracking-widest bg-gray-50/50"
+                      maxLength="6"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setMostrarModalPinEditar(false)
+                      setPinInput("")
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarEditarEmpresa}
+                    disabled={loadingPin || pinInput.length !== 6}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    Continuar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de cierre de sesión */}
+      <AnimatePresence>
+        {mostrarModalLogout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalLogout(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-red-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¿Cerrar sesión?</h3>
+                  <p className="text-sm text-gray-500">Serás redirigido al login</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  Al cerrar sesión, perderás el acceso al panel de administración hasta que vuelvas a iniciar sesión.
+                </p>
+              </div>
+
+              {/* Botones */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setMostrarModalLogout(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarCerrarSesion}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Sí, salir
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Seleccionado */}
+      <AnimatePresence>
+        {mostrarModalSeleccionado && empresaSeleccionadaTemp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalSeleccionado(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Seleccionado</h3>
+                  <p className="text-sm text-gray-500">Empresa seleccionada correctamente</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  Ahora estás gestionando a <strong>{empresaSeleccionadaTemp.correo}</strong>
+                </p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalSeleccionado(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Error PIN */}
+      <AnimatePresence>
+        {mostrarModalErrorPin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalErrorPin(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Error</h3>
+                  <p className="text-sm text-gray-500">PIN incorrecto</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  El PIN ingresado no es válido. Por favor, intenta nuevamente.
+                </p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalErrorPin(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

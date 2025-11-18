@@ -7,8 +7,7 @@ import { doc, setDoc } from "firebase/firestore"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { tsParticles } from "tsparticles-engine"
-import Swal from "sweetalert2"
-import { PhoneIcon, MapPinIcon } from "@heroicons/react/24/solid"
+import { PhoneIcon, MapPinIcon, ArrowPathIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid"
 
 function Registro() {
   const [formData, setFormData] = useState({
@@ -21,6 +20,10 @@ function Registro() {
   const [pinInput, setPinInput] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [mostrarModalCarga, setMostrarModalCarga] = useState(false)
+  const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [mostrarModalError, setMostrarModalError] = useState(false)
+  const [mensajeError, setMensajeError] = useState("")
   const [mostrarContrasena, setMostrarContrasena] = useState(false)
   const [mostrarConfirmarContrasena, setMostrarConfirmarContrasena] = useState(false)
   const [validacion, setValidacion] = useState({
@@ -164,16 +167,10 @@ function Registro() {
 
     setLoading(true)
     setError("")
+    setMostrarModal(false)
+    setMostrarModalCarga(true)
 
     try {
-      Swal.fire({
-        title: "Creando usuario...",
-        text: "Espere mientras se procesa el registro",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => Swal.showLoading(),
-      })
-
       const userCredential = await createUserWithEmailAndPassword(auth, formData.correo, formData.contrasena)
       const uid = userCredential.user.uid
 
@@ -184,41 +181,51 @@ function Registro() {
         activo: true,
       })
 
-      setMostrarModal(false)
-
-      Swal.fire({
-        title: "¡Registro exitoso!",
-        text: "El usuario fue creado correctamente.",
-        icon: "success",
-        confirmButtonColor: "#ef4444",
-      }).then(() => {
-        navigate("/")
-      })
+      setMostrarModalCarga(false)
+      setMostrarModalExito(true)
     } catch (err) {
       console.error(err)
 
-      let mensajeError = "No se pudo registrar el usuario."
+      let errorMsg = "No se pudo registrar el usuario."
 
       if (err.code === "auth/email-already-in-use") {
-        mensajeError = "Este correo ya está registrado."
+        errorMsg = "Este correo ya está registrado."
       } else if (err.code === "auth/weak-password") {
-        mensajeError = "La contraseña debe tener al menos 6 caracteres."
+        errorMsg = "La contraseña debe tener al menos 6 caracteres."
       }
 
-      Swal.fire({
-        title: "Error",
-        text: mensajeError,
-        icon: "error",
-        confirmButtonColor: "#ef4444",
-      })
-
-      setError(mensajeError)
+      setMensajeError(errorMsg)
+      setMostrarModalCarga(false)
+      setMostrarModalError(true)
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }
   }
 
   const fortalezaContrasena = validarContrasena(formData.contrasena)
+
+  // Inyectar CSS para animación spin
+  useEffect(() => {
+    const spinKeyframes = `
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `
+    if (typeof document !== "undefined") {
+      const style = document.createElement("style")
+      style.textContent = spinKeyframes
+      if (!document.head.querySelector("style[data-spin-registro]")) {
+        style.setAttribute("data-spin-registro", "true")
+        document.head.appendChild(style)
+      }
+    }
+  }, [])
 
   return (
     <div className="relative min-h-screen bg-slate-50 overflow-hidden">
@@ -815,6 +822,129 @@ function Registro() {
       </AnimatePresence>
 
       <footer className="absolute bottom-4 text-center w-full text-sm text-gray-500">© 2025 Gerardo Gonzalez</footer>
+
+      {/* Modal de carga */}
+      <AnimatePresence>
+        {mostrarModalCarga && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              <div className="text-center py-8">
+                <div className="flex justify-center items-center mb-4">
+                  <ArrowPathIcon
+                    className="h-12 w-12 text-red-600"
+                    style={{
+                      animation: "spin 2s linear infinite",
+                    }}
+                  />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Creando Usuario</h3>
+                <p className="text-sm text-gray-600">Espere mientras se procesa el registro</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de éxito */}
+      <AnimatePresence>
+        {mostrarModalExito && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Registro Exitoso!</h3>
+                  <p className="text-sm text-gray-500">Usuario creado correctamente</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">El usuario fue creado correctamente en el sistema.</p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => {
+                  setMostrarModalExito(false)
+                  navigate("/")
+                }}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Ir al Login
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de error */}
+      <AnimatePresence>
+        {mostrarModalError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Error en el Registro</h3>
+                  <p className="text-sm text-gray-500">No se pudo completar el registro</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">{mensajeError}</p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => {
+                  setMostrarModalError(false)
+                }}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Entendido
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

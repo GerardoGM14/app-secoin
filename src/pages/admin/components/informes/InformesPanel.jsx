@@ -7,6 +7,7 @@ import { collection, addDoc, getDocs, Timestamp, query, where, deleteDoc, doc } 
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
 import Swal from "sweetalert2"
 import { motion, AnimatePresence } from "framer-motion"
+import { CheckCircleIcon, ArrowPathIcon } from "@heroicons/react/24/solid"
 
 function InformesPanel({ empresaSeleccionada }) {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
@@ -14,6 +15,9 @@ function InformesPanel({ empresaSeleccionada }) {
   const [informes, setInformes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [subiendo, setSubiendo] = useState(false)
+  const [mostrarModalCarga, setMostrarModalCarga] = useState(false)
+  const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [nombreArchivoProcesando, setNombreArchivoProcesando] = useState("")
   const [filtro, setFiltro] = useState("todos")
   const [ordenarPor, setOrdenarPor] = useState("fecha-desc")
   const [arrastrandoArchivo, setArrastrandoArchivo] = useState(false)
@@ -116,17 +120,8 @@ function InformesPanel({ empresaSeleccionada }) {
 
     try {
       setSubiendo(true)
-      Swal.fire({
-        title: "Subiendo informe...",
-        html: `
-                  <div class="flex flex-col items-center">
-                    <div class="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="text-gray-600">Procesando ${archivoSeleccionado.name}</p>
-                  </div>
-                `,
-        allowOutsideClick: false,
-        showConfirmButton: false,
-      })
+      setNombreArchivoProcesando(archivoSeleccionado.name)
+      setMostrarModalCarga(true)
 
       const fechaActual = new Date().getTime()
       const nombreArchivo = `${fechaActual}_${archivoSeleccionado.name}`
@@ -149,12 +144,8 @@ function InformesPanel({ empresaSeleccionada }) {
       setComentario("")
       if (inputRef.current) inputRef.current.value = ""
 
-      Swal.fire({
-        title: "¡Éxito!",
-        text: "Informe subido correctamente",
-        icon: "success",
-        confirmButtonColor: "#ef4444",
-      })
+      setMostrarModalCarga(false)
+      setMostrarModalExito(true)
 
       // Recargar lista
       const q = query(collection(db, "informes"), where("empresaId", "==", empresaSeleccionada.id))
@@ -171,6 +162,7 @@ function InformesPanel({ empresaSeleccionada }) {
       })
     } finally {
       setSubiendo(false)
+      setMostrarModalCarga(false)
     }
   }
 
@@ -853,6 +845,76 @@ function InformesPanel({ empresaSeleccionada }) {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Modal de Carga */}
+      <AnimatePresence>
+        {mostrarModalCarga && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <ArrowPathIcon className="h-6 w-6 text-red-600 animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Subiendo informe...</h3>
+                  <p className="text-sm text-gray-500">Procesando {nombreArchivoProcesando}</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Éxito */}
+      <AnimatePresence>
+        {mostrarModalExito && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalExito(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Éxito!</h3>
+                  <p className="text-sm text-gray-500">Informe subido correctamente</p>
+                </div>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalExito(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

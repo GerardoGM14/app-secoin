@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import Swal from "sweetalert2"
 import { motion, AnimatePresence } from "framer-motion"
+import { ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon } from "@heroicons/react/24/solid"
 
-function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuario, dniUsuario }) {
+function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuario, dniUsuario, onResultado, esPublico = false }) {
   const [respuestas, setRespuestas] = useState({})
   const [mostrarResultados, setMostrarResultados] = useState(false)
   const [intentosRestantes, setIntentosRestantes] = useState(2)
@@ -12,6 +12,9 @@ function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuar
   const [preguntaActual, setPreguntaActual] = useState(0)
   const [modoRevision, setModoRevision] = useState(false)
   const [preguntasRespondidas, setPreguntasRespondidas] = useState(0)
+  const [mostrarModalPreguntasSinResponder, setMostrarModalPreguntasSinResponder] = useState(false)
+  const [mostrarModalResultado, setMostrarModalResultado] = useState(false)
+  const [datosResultado, setDatosResultado] = useState(null)
 
   // Manejar ESC para cerrar el modal
   useEffect(() => {
@@ -90,111 +93,61 @@ function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuar
 
   const mostrarResumen = (nota, tiempoAgotado = false) => {
     const aprobado = nota >= 14
-
-    // Personalizar el mensaje según si aprobó o no
-    let mensaje = ""
-    let icono = ""
-
-    if (tiempoAgotado) {
-      mensaje = `
-        <div class="space-y-3">
-          <p class="text-lg">Se agotó el tiempo</p>
-          <p class="text-lg">Tu nota es: <strong>${nota}</strong> de 20</p>
-          ${
-            aprobado
-              ? '<p class="text-green-600 font-semibold mt-2">¡Has aprobado! 🎉</p>'
-              : '<p class="text-red-600 font-semibold mt-2">No has aprobado.</p>'
-          }
-        </div>
-      `
-      icono = aprobado ? "success" : "error"
-    } else if (aprobado) {
-      mensaje = `
-        <div class="space-y-3">
-          <p class="text-lg">¡Felicidades, <strong>${nombreUsuario}</strong>!</p>
-          <p class="text-lg">Tu nota es: <strong>${nota}</strong> de 20</p>
-          <p class="text-green-600 font-semibold mt-2">Has aprobado la evaluación 🎉</p>
-        </div>
-      `
-      icono = "success"
-    } else {
-      mensaje = `
-        <div class="space-y-3">
-          <p class="text-lg">Tu nota es: <strong>${nota}</strong> de 20</p>
-          <p class="text-red-600 font-semibold mt-2">No has alcanzado la nota mínima aprobatoria (14).</p>
-          ${
-            intentosRestantes > 1
-              ? `<p class="text-gray-600">Tienes ${intentosRestantes - 1} intento más disponible.</p>`
-              : '<p class="text-gray-600">Has agotado todos tus intentos.</p>'
-          }
-        </div>
-      `
-      icono = "error"
-    }
-
-    Swal.fire({
-      title: "Resultado Final",
-      html: mensaje,
-      icon: icono,
-      confirmButtonText: intentosRestantes > 1 && nota < 14 ? "Volver a intentar" : "Aceptar",
-      confirmButtonColor: "#ef4444",
-      showDenyButton: !tiempoAgotado && nota >= 0,
-      denyButtonText: "Revisar respuestas",
-      denyButtonColor: "#3b82f6",
-      customClass: {
-        confirmButton: "swal-confirm-button",
-      },
-    }).then((result) => {
-      if (result.isDenied) {
-        setModoRevision(true)
-      } else if (nota < 14 && intentosRestantes > 1 && result.isConfirmed) {
-        setIntentosRestantes(intentosRestantes - 1)
-        setMostrarResultados(false)
-        setRespuestas({})
-        setNotaFinal(null)
-        setTiempoRestante(tiempoLimite * 60)
-        setContadorActivo(true)
-        setModoRevision(false)
-        setPreguntaActual(0)
-      } else {
-        onClose() // Cierra el modal manual o si se acabaron intentos
-      }
+    setDatosResultado({
+      nota,
+      aprobado,
+      tiempoAgotado,
+      intentosRestantes,
     })
+    setMostrarModalResultado(true)
+  }
+
+  const manejarResultadoModal = (accion) => {
+    if (accion === "revisar") {
+      setModoRevision(true)
+      setMostrarModalResultado(false)
+    } else if (accion === "reintentar") {
+      setIntentosRestantes(intentosRestantes - 1)
+      setMostrarResultados(false)
+      setRespuestas({})
+      setNotaFinal(null)
+      setTiempoRestante(tiempoLimite * 60)
+      setContadorActivo(true)
+      setModoRevision(false)
+      setPreguntaActual(0)
+      setMostrarModalResultado(false)
+    } else {
+      onClose()
+      setMostrarModalResultado(false)
+    }
   }
 
   const handleEnviar = (tiempoAgotado = false) => {
     // Verificar si respondió todas las preguntas
     if (!tiempoAgotado && Object.keys(respuestas).length < preguntas.length) {
-      Swal.fire({
-        title: "Preguntas sin responder",
-        text: `Has respondido ${Object.keys(respuestas).length} de ${
-          preguntas.length
-        } preguntas. ¿Deseas enviar de todas formas?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#ef4444",
-        cancelButtonColor: "#6b7280",
-        confirmButtonText: "Sí, enviar",
-        cancelButtonText: "Seguir respondiendo",
-        customClass: {
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      }).then((result) => {
-        if (result.isConfirmed) {
-          finalizarEvaluacion(tiempoAgotado)
-        }
-      })
+      setMostrarModalPreguntasSinResponder(true)
     } else {
       finalizarEvaluacion(tiempoAgotado)
     }
   }
 
+  const confirmarEnvioSinResponder = () => {
+    setMostrarModalPreguntasSinResponder(false)
+    finalizarEvaluacion(false)
+  }
+
   const finalizarEvaluacion = (tiempoAgotado) => {
     const nota = calcularNota()
+    const aprobado = nota >= 14
     setNotaFinal(nota)
     setMostrarResultados(true)
     setContadorActivo(false)
+    
+    // Si es público y tiene callback, guardar resultado
+    if (esPublico && onResultado) {
+      onResultado(nota, aprobado, respuestas)
+    }
+    
     mostrarResumen(nota, tiempoAgotado)
   }
 
@@ -229,6 +182,28 @@ function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuar
     if (porcentaje > 25) return "bg-yellow-100"
     return "bg-red-100"
   }
+
+  // Inyectar CSS para animación spin
+  useEffect(() => {
+    const spinKeyframes = `
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `
+    if (typeof document !== "undefined") {
+      const style = document.createElement("style")
+      style.textContent = spinKeyframes
+      if (!document.head.querySelector("style[data-spin-cuestionario]")) {
+        style.setAttribute("data-spin-cuestionario", "true")
+        document.head.appendChild(style)
+      }
+    }
+  }, [])
 
   return (
     <motion.div
@@ -644,6 +619,162 @@ function CuestionarioRender({ preguntas, tiempoLimite = 20, onClose, nombreUsuar
           )}
         </div>
       </motion.div>
+
+      {/* Modal de preguntas sin responder */}
+      <AnimatePresence>
+        {mostrarModalPreguntasSinResponder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-amber-100 p-2 rounded-full">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Preguntas Sin Responder</h3>
+                  <p className="text-sm text-gray-500">Faltan preguntas por responder</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700 mb-2">
+                  Has respondido <strong>{Object.keys(respuestas).length}</strong> de <strong>{preguntas.length}</strong>{" "}
+                  preguntas.
+                </p>
+                <p className="text-xs text-gray-600">¿Deseas enviar la evaluación de todas formas?</p>
+              </div>
+
+              {/* Botones */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setMostrarModalPreguntasSinResponder(false)
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Seguir respondiendo
+                </button>
+                <button
+                  onClick={confirmarEnvioSinResponder}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Sí, enviar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de resultado final */}
+      <AnimatePresence>
+        {mostrarModalResultado && datosResultado && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className={`p-2 rounded-full ${datosResultado.aprobado ? "bg-green-100" : "bg-red-100"}`}>
+                  {datosResultado.aprobado ? (
+                    <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                  ) : (
+                    <XCircleIcon className="h-6 w-6 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Resultado Final</h3>
+                  <p className="text-sm text-gray-500">Evaluación completada</p>
+                </div>
+              </div>
+
+              {/* Información del resultado */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="space-y-3">
+                  {datosResultado.tiempoAgotado && (
+                    <p className="text-sm font-medium text-gray-700">Se agotó el tiempo</p>
+                  )}
+                  {!datosResultado.tiempoAgotado && datosResultado.aprobado && (
+                    <p className="text-sm font-medium text-gray-700">
+                      ¡Felicidades, <strong>{nombreUsuario}</strong>!
+                    </p>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600">Tu nota:</span>
+                    <span className="text-lg font-bold text-gray-900">{datosResultado.nota}/20</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-3">
+                    {datosResultado.aprobado ? (
+                      <p className="text-sm font-semibold text-green-600">Has aprobado la evaluación 🎉</p>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-red-600 mb-2">
+                          No has alcanzado la nota mínima aprobatoria (14).
+                        </p>
+                        {datosResultado.intentosRestantes > 1 ? (
+                          <p className="text-xs text-gray-600">
+                            Tienes {datosResultado.intentosRestantes - 1} intento más disponible.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-600">Has agotado todos tus intentos.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex flex-col gap-3">
+                {!datosResultado.tiempoAgotado && datosResultado.nota >= 0 && (
+                  <button
+                    onClick={() => manejarResultadoModal("revisar")}
+                    className="w-full px-4 py-2 border border-blue-300 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                  >
+                    Revisar respuestas
+                  </button>
+                )}
+                <div className="flex space-x-3">
+                  {datosResultado.nota < 14 && datosResultado.intentosRestantes > 1 ? (
+                    <button
+                      onClick={() => manejarResultadoModal("reintentar")}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Volver a intentar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => manejarResultadoModal("aceptar")}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Aceptar
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

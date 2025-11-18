@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLocation } from "react-router-dom"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "../../../firebase/firebaseConfig"
 import {
@@ -10,10 +11,14 @@ import {
   CogIcon,
   FolderIcon,
   ChevronDownIcon,
+  MapPinIcon,
 } from "@heroicons/react/24/solid"
+import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 
 function Sidebar({ setSeccionActiva, seccionActiva }) {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [nombreSistema, setNombreSistema] = useState("Admin")
   const [logoURL, setLogoURL] = useState(null)
   const [subMenuHerramientas, setSubMenuHerramientas] = useState(false)
@@ -37,6 +42,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
     { id: "informes", label: "Informes", icon: <DocumentChartBarIcon className="h-5 w-5" /> },
     { id: "capacitacion", label: "Capacitación", icon: <AcademicCapIcon className="h-5 w-5" /> },
     { id: "mensajes", label: "Mensajes", icon: <ChatBubbleLeftEllipsisIcon className="h-5 w-5" /> },
+    { id: "monitoreo", label: "Monitoreo", icon: <MapPinIcon className="h-5 w-5" />, route: "/admin/monitoreo" },
     { id: "administracion", label: "Documentos", icon: <FolderIcon className="h-5 w-5" /> },
   ]
 
@@ -182,9 +188,15 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                 <motion.button
                   key={index}
                   variants={itemVariants}
-                  onClick={() => setSeccionActiva(item.id)}
+                  onClick={() => {
+                    if (item.route) {
+                      navigate(item.route)
+                    } else {
+                      setSeccionActiva(item.id)
+                    }
+                  }}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                    isActive
+                    isActive || (item.route && location.pathname === item.route)
                       ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                       : "text-gray-700 hover:bg-red-50 hover:text-red-600"
                   }`}

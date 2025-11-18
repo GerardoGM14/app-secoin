@@ -100,13 +100,56 @@ function Login() {
 
   // Función para detectar cambio de rol
   const detectarCambioRol = (nuevoUsuario) => {
+    // Primero intentar con localStorage (sesión activa)
     const usuarioActual = localStorage.getItem("usuario")
     if (usuarioActual) {
-      const usuarioParseado = JSON.parse(usuarioActual)
-      if (usuarioParseado.rol !== nuevoUsuario.rol || usuarioParseado.correo !== nuevoUsuario.correo) {
-        return usuarioParseado
+      try {
+        const usuarioParseado = JSON.parse(usuarioActual)
+        console.log("🔍 Comparando usuarios (localStorage):", {
+          anterior: usuarioParseado.rol,
+          nuevo: nuevoUsuario.rol,
+          correoAnterior: usuarioParseado.correo,
+          correoNuevo: nuevoUsuario.correo,
+        })
+        
+        // Detectar cambio de rol o correo
+        if (usuarioParseado.rol !== nuevoUsuario.rol || usuarioParseado.correo !== nuevoUsuario.correo) {
+          console.log("✅ Cambio detectado - retornando usuario anterior")
+          return usuarioParseado
+        }
+        console.log("❌ No hay cambio detectado")
+      } catch (error) {
+        console.error("Error al parsear usuario anterior:", error)
       }
+    } else {
+      console.log("⚠️ No hay usuario anterior en localStorage")
     }
+
+    // Si no hay en localStorage, intentar con últimoUsuario (persiste después de cerrar sesión)
+    const ultimoUsuario = localStorage.getItem("ultimoUsuario")
+    if (ultimoUsuario) {
+      try {
+        const usuarioParseado = JSON.parse(ultimoUsuario)
+        console.log("🔍 Comparando usuarios (ultimoUsuario):", {
+          anterior: usuarioParseado.rol,
+          nuevo: nuevoUsuario.rol,
+          correoAnterior: usuarioParseado.correo,
+          correoNuevo: nuevoUsuario.correo,
+        })
+        
+        // Detectar cambio de rol o correo
+        if (usuarioParseado.rol !== nuevoUsuario.rol || usuarioParseado.correo !== nuevoUsuario.correo) {
+          console.log("✅ Cambio detectado (desde último usuario) - retornando usuario anterior")
+          return usuarioParseado
+        }
+        console.log("❌ No hay cambio detectado con último usuario")
+      } catch (error) {
+        console.error("Error al parsear último usuario:", error)
+      }
+    } else {
+      console.log("⚠️ No hay último usuario guardado")
+    }
+    
     return null
   }
 
@@ -129,6 +172,10 @@ function Login() {
     localStorage.setItem("userRole", usuario.rol)
     localStorage.setItem("userEmail", usuario.correo)
     localStorage.setItem("userUID", uid)
+
+    // Guardar también como último usuario (para detectar cambios después de cerrar sesión)
+    // Esto NO se limpia al cerrar sesión, solo se actualiza con el nuevo login
+    localStorage.setItem("ultimoUsuario", JSON.stringify(datosCompletos))
 
     // Guardar en sessionStorage
     sessionStorage.setItem("usuario", JSON.stringify(datosCompletos))
@@ -161,16 +208,23 @@ function Login() {
         console.log("🔓 Sesión de Firebase cerrada")
       }
 
-      // Paso 2: Limpiar storage completamente
+      // Paso 2: Limpiar storage completamente (excepto ultimoUsuario para futuras comparaciones)
+      const ultimoUsuarioBackup = localStorage.getItem("ultimoUsuario")
       localStorage.clear()
       sessionStorage.clear()
-      console.log("🧹 Storage limpiado")
+      // Restaurar ultimoUsuario después de limpiar (para que persista)
+      if (ultimoUsuarioBackup) {
+        localStorage.setItem("ultimoUsuario", ultimoUsuarioBackup)
+      }
+      console.log("🧹 Storage limpiado (manteniendo último usuario para comparación)")
 
       // Paso 3: Pequeña pausa para asegurar limpieza
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Paso 4: Autenticar nuevamente con Firebase para obtener UID
-      const userCredential = await signInWithEmailAndPassword(auth, correo, contrasena)
+      // Usar las credenciales del nuevo usuario
+      const correoNuevo = datosNuevoUsuario.correo
+      const userCredential = await signInWithEmailAndPassword(auth, correoNuevo, contrasena)
       const uid = userCredential.user.uid
       console.log("🔑 Re-autenticado con UID:", uid)
 
@@ -180,6 +234,17 @@ function Login() {
       if (!sesionGuardada) {
         throw new Error("Error al guardar la sesión")
       }
+
+      // Actualizar también ultimoUsuario con el nuevo usuario
+      const datosCompletos = {
+        ...datosNuevoUsuario,
+        uid: uid,
+        id: uid,
+        isAuthenticated: true,
+        loginTime: new Date().toISOString(),
+        sessionId: Date.now().toString(),
+      }
+      localStorage.setItem("ultimoUsuario", JSON.stringify(datosCompletos))
 
       console.log("💾 Nueva sesión guardada correctamente")
 
@@ -224,21 +289,30 @@ function Login() {
           throw new Error("Rol no válido")
         }
 
-        // Detectar cambio de rol
+        // Detectar cambio de rol ANTES de guardar la nueva sesión
         const usuarioAnteriorDetectado = detectarCambioRol(usuario)
+
+        console.log("🔍 Resultado de detección:", {
+          usuarioAnteriorDetectado,
+          nuevoRol: usuario.rol,
+          nuevoCorreo: usuario.correo,
+        })
 
         if (usuarioAnteriorDetectado) {
           console.log("🔄 Cambio de rol detectado:", {
             anterior: usuarioAnteriorDetectado.rol,
             nuevo: usuario.rol,
+            correoAnterior: usuarioAnteriorDetectado.correo,
+            correoNuevo: usuario.correo,
           })
 
+          // IMPORTANTE: NO guardar la sesión todavía, mostrar el modal primero
           // Mostrar modal de cambio
           setUsuarioAnterior(usuarioAnteriorDetectado)
-          setDatosNuevoUsuario(usuario)
+          setDatosNuevoUsuario({ ...usuario, uid })
           setMostrarModalCambio(true)
           setCargando(false)
-          return
+          return // Salir aquí para que no se guarde la sesión ni se redirija
         }
 
         // Si no hay cambio de rol, proceder normalmente
@@ -304,7 +378,13 @@ function Login() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Cambio de Usuario Detectado</h3>
-                    <p className="text-sm text-gray-500">Se requiere cambiar la sesión actual</p>
+                    <p className="text-sm text-gray-500">
+                      {usuarioAnterior?.rol === "administrador" && datosNuevoUsuario?.rol === "empresa"
+                        ? "Cambiando de administrador a empresa"
+                        : usuarioAnterior?.rol === "empresa" && datosNuevoUsuario?.rol === "administrador"
+                        ? "Cambiando de empresa a administrador"
+                        : "Se requiere cambiar la sesión actual"}
+                    </p>
                   </div>
                 </div>
 
@@ -333,8 +413,11 @@ function Login() {
 
                 {/* Mensaje explicativo */}
                 <p className="text-sm text-gray-600 mb-6">
-                  Para cambiar de usuario, necesitamos limpiar la sesión actual y configurar la nueva. Este proceso es
-                  automático y te redirigirá al panel correspondiente.
+                  {usuarioAnterior?.rol === "administrador" && datosNuevoUsuario?.rol === "empresa"
+                    ? "Estás cambiando de sesión de administrador a empresa. Se limpiará la sesión actual y se configurará la nueva sesión empresarial."
+                    : usuarioAnterior?.rol === "empresa" && datosNuevoUsuario?.rol === "administrador"
+                    ? "Estás cambiando de sesión de empresa a administrador. Se limpiará la sesión actual y se configurará la nueva sesión administrativa."
+                    : "Para cambiar de usuario, necesitamos limpiar la sesión actual y configurar la nueva. Este proceso es automático y te redirigirá al panel correspondiente."}
                 </p>
 
                 {/* Botones */}

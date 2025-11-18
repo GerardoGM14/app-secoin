@@ -1,9 +1,10 @@
 import { useRef, useState } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import Swal from "sweetalert2"
 import { db, storage } from "../../../../firebase/firebaseConfig"
 import { collection, addDoc, Timestamp } from "firebase/firestore"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { XCircleIcon } from "@heroicons/react/24/solid"
 
 const PIN_VALIDO = "140603"
 
@@ -16,6 +17,7 @@ function CrearClase({ visible, onClaseCreada }) {
   const [previewImagen, setPreviewImagen] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [paso, setPaso] = useState(1) // Para navegación por pasos
+  const [mostrarModalErrorPin, setMostrarModalErrorPin] = useState(false)
   const inputDocsRef = useRef()
   const inputImgRef = useRef()
 
@@ -85,12 +87,7 @@ function CrearClase({ visible, onClaseCreada }) {
     if (!pin) return // Cancelado
 
     if (pin !== PIN_VALIDO) {
-      Swal.fire({
-        title: "Error",
-        text: "PIN incorrecto.",
-        icon: "error",
-        confirmButtonColor: "#ef4444",
-      })
+      setMostrarModalErrorPin(true)
       return
     }
 
@@ -677,6 +674,53 @@ function CrearClase({ visible, onClaseCreada }) {
           </button>
         )}
       </div>
+
+      {/* Modal de Error PIN */}
+      <AnimatePresence>
+        {mostrarModalErrorPin && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalErrorPin(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Error</h3>
+                  <p className="text-sm text-gray-500">PIN incorrecto</p>
+                </div>
+              </div>
+
+              {/* Información */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  El PIN ingresado no es válido. Por favor, intenta nuevamente.
+                </p>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalErrorPin(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }

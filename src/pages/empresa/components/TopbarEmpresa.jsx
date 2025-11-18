@@ -94,15 +94,23 @@ function TopbarEmpresa() {
       console.log("🔥 Cerrando sesión de Firebase...")
       await signOut(auth)
 
-      // 2. Limpiar localStorage
+      // 2. Limpiar localStorage (preservando ultimoUsuario para detectar cambios de rol)
       console.log("💾 Limpiando localStorage...")
+      const ultimoUsuarioBackup = localStorage.getItem("ultimoUsuario")
       const keysToRemove = []
       for (let i = 0; i < localStorage.length; i++) {
-        keysToRemove.push(localStorage.key(i))
+        const key = localStorage.key(i)
+        if (key && key !== "ultimoUsuario") {
+          keysToRemove.push(key)
+        }
       }
       keysToRemove.forEach((key) => {
         if (key) localStorage.removeItem(key)
       })
+      // Restaurar ultimoUsuario después de limpiar
+      if (ultimoUsuarioBackup) {
+        localStorage.setItem("ultimoUsuario", ultimoUsuarioBackup)
+      }
 
       // 3. Limpiar sessionStorage
       console.log("🗂️ Limpiando sessionStorage...")

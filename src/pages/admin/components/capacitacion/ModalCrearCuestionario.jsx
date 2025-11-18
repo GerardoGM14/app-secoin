@@ -5,6 +5,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from "sweetalert2"
 import { motion, AnimatePresence } from "framer-motion"
 import * as mammoth from "mammoth"
+import { CheckCircleIcon, ArrowPathIcon, ClipboardDocumentIcon, QrCodeIcon } from "@heroicons/react/24/solid"
+import QRCode from "qrcode"
 
 function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
   const [titulo, setTitulo] = useState("")
@@ -13,6 +15,15 @@ function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
   const [archivo, setArchivo] = useState(null)
   const [paso, setPaso] = useState(1)
   const [cargando, setCargando] = useState(false)
+  const [mostrarModalCarga, setMostrarModalCarga] = useState(false)
+  const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [mostrarModalCompartir, setMostrarModalCompartir] = useState(false)
+  const [preguntasCreadas, setPreguntasCreadas] = useState(0)
+  const [cuestionarioId, setCuestionarioId] = useState(null)
+  const [enlaceEvaluacion, setEnlaceEvaluacion] = useState("")
+  const [qrCodeUrl, setQrCodeUrl] = useState("")
+  const [pasoCompartir, setPasoCompartir] = useState(1)
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false)
 
   const pinGenerado = Math.floor(1000 + Math.random() * 9000).toString()
 
@@ -60,23 +71,7 @@ function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
 
     try {
       setCargando(true)
-      Swal.fire({
-        title: "Procesando archivo...",
-        html: `
-          <div class="space-y-3">
-            <div class="flex justify-center">
-              <div class="animate-spin rounded-full h-10 w-10 border-4 border-red-500 border-t-transparent"></div>
-            </div>
-            <p class="text-gray-600">Analizando preguntas y opciones</p>
-            <p class="text-xs text-gray-500">Esto puede tomar unos momentos</p>
-          </div>
-        `,
-        showConfirmButton: false,
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading()
-        },
-      })
+      setMostrarModalCarga(true)
 
       // Leer contenido del .docx
       const arrayBuffer = await archivo.arrayBuffer()
@@ -108,7 +103,7 @@ function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
       const archivoURL = await getDownloadURL(archivoRef)
 
       // Guardar en Firestore
-      await addDoc(collection(db, "capacitaciones", cursoId, "cuestionarios"), {
+      const docRef = await addDoc(collection(db, "capacitaciones", cursoId, "cuestionarios"), {
         titulo,
         tiempo: Number.parseInt(tiempo),
         telefono,
@@ -116,20 +111,34 @@ function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
         archivoURL,
         creadoEn: new Date(),
         preguntas: seleccionadas,
+        activo: true,
+        fechaExpiracion: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 días
       })
 
+      // Generar enlace y QR
+      const enlace = `${window.location.origin}/evaluacion-publica/${cursoId}/${docRef.id}`
+      setEnlaceEvaluacion(enlace)
+      setCuestionarioId(docRef.id)
+
+      // Generar QR
+      try {
+        const qrDataUrl = await QRCode.toDataURL(enlace, {
+          width: 300,
+          margin: 2,
+        })
+        setQrCodeUrl(qrDataUrl)
+      } catch (qrError) {
+        console.error("Error al generar QR:", qrError)
+      }
+
       setCargando(false)
-      Swal.fire({
-        title: "¡Cuestionario creado!",
-        text: `Se han configurado ${seleccionadas.length} preguntas correctamente.`,
-        icon: "success",
-        confirmButtonColor: "#ef4444",
-      })
-      onGuardado()
-      onClose()
+      setMostrarModalCarga(false)
+      setPreguntasCreadas(seleccionadas.length)
+      setMostrarModalExito(true)
     } catch (err) {
       console.error(err)
       setCargando(false)
+      setMostrarModalCarga(false)
       Swal.fire({
         title: "Error",
         text: "No se pudo procesar el archivo. Verifica el formato e intenta nuevamente.",
@@ -565,6 +574,322 @@ function ModalCrearCuestionario({ cursoId, onClose, onGuardado }) {
           )}
         </div>
       </motion.div>
+
+      {/* Modal de Carga */}
+      <AnimatePresence>
+        {mostrarModalCarga && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <ArrowPathIcon className="h-6 w-6 text-red-600 animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Procesando archivo...</h3>
+                  <p className="text-sm text-gray-500">Analizando preguntas y opciones</p>
+                </div>
+              </div>
+
+              {/* Información adicional */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs text-gray-600 text-center">Esto puede tomar unos momentos</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Éxito */}
+      <AnimatePresence>
+        {mostrarModalExito && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => {
+              setMostrarModalExito(false)
+              onGuardado()
+              onClose()
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Cuestionario creado!</h3>
+                  <p className="text-sm text-gray-500">Se han configurado {preguntasCreadas} preguntas correctamente</p>
+                </div>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => {
+                  setMostrarModalExito(false)
+                  setMostrarModalCompartir(true)
+                }}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Compartir evaluación
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Compartir - Tutorial por pasos */}
+      <AnimatePresence>
+        {mostrarModalCompartir && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => {
+              setMostrarModalCompartir(false)
+              onGuardado()
+              onClose()
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <QrCodeIcon className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Compartir evaluación</h3>
+                    <p className="text-sm text-gray-500">Comparte el enlace y QR con los participantes</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setMostrarModalCompartir(false)
+                    onGuardado()
+                    onClose()
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Indicador de pasos */}
+              <div className="mb-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                      pasoCompartir >= 1 ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    1
+                  </div>
+                  <div className={`flex-1 h-1 mx-2 ${pasoCompartir > 1 ? "bg-red-500" : "bg-gray-200"}`}></div>
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                      pasoCompartir >= 2 ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    2
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Copiar enlace</span>
+                  <span>Compartir QR</span>
+                </div>
+              </div>
+
+              {/* Contenido por pasos */}
+              <AnimatePresence mode="wait">
+                {pasoCompartir === 1 && (
+                  <motion.div
+                    key="paso1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Enlace de la evaluación</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={enlaceEvaluacion}
+                          readOnly
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                        />
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(enlaceEvaluacion)
+                              setEnlaceCopiado(true)
+                              setTimeout(() => setEnlaceCopiado(false), 2000)
+                            } catch (err) {
+                              console.error("Error al copiar:", err)
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <ClipboardDocumentIcon className="h-5 w-5" />
+                          Copiar
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Comparte este enlace con los participantes para que puedan acceder a la evaluación
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {pasoCompartir === 2 && (
+                  <motion.div
+                    key="paso2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Código QR</label>
+                      <div className="flex flex-col items-center bg-gray-50 rounded-lg p-6">
+                        {qrCodeUrl ? (
+                          <>
+                            <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64 mb-4" />
+                            <p className="text-xs text-gray-600 text-center">
+                              Los participantes pueden escanear este código QR para acceder directamente a la evaluación
+                            </p>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const link = document.createElement("a")
+                                  link.href = qrCodeUrl
+                                  link.download = `qr-evaluacion-${cuestionarioId}.png`
+                                  link.click()
+                                } catch (err) {
+                                  console.error("Error al descargar QR:", err)
+                                }
+                              }}
+                              className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                            >
+                              Descargar QR
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center text-gray-500">
+                            <p>Generando QR...</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Botones de navegación */}
+              <div className="flex justify-between mt-6 pt-6 border-t border-gray-200">
+                {pasoCompartir === 1 ? (
+                  <button
+                    onClick={() => {
+                      setMostrarModalCompartir(false)
+                      onGuardado()
+                      onClose()
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setPasoCompartir(pasoCompartir - 1)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Anterior
+                  </button>
+                )}
+
+                {pasoCompartir === 1 ? (
+                  <button
+                    onClick={() => setPasoCompartir(2)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Siguiente
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMostrarModalCompartir(false)
+                      onGuardado()
+                      onClose()
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Finalizar
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Enlace Copiado */}
+      <AnimatePresence>
+        {enlaceCopiado && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Copiado!</h3>
+                  <p className="text-sm text-gray-500">El enlace ha sido copiado al portapapeles</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
