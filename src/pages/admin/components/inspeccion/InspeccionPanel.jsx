@@ -4,7 +4,7 @@ import { collection, addDoc, getDocs, Timestamp, query, where, deleteDoc, doc } 
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
 import Swal from "sweetalert2"
 import { motion, AnimatePresence } from "framer-motion"
-import { CheckCircleIcon, ArrowPathIcon } from "@heroicons/react/24/solid"
+import { CheckCircleIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid"
 
 function InspeccionPanel({ empresaSeleccionada }) {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
@@ -14,6 +14,10 @@ function InspeccionPanel({ empresaSeleccionada }) {
   const [subiendo, setSubiendo] = useState(false)
   const [mostrarModalCarga, setMostrarModalCarga] = useState(false)
   const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false)
+  const [mostrarModalEliminando, setMostrarModalEliminando] = useState(false)
+  const [mostrarModalEliminado, setMostrarModalEliminado] = useState(false)
+  const [archivoAEliminar, setArchivoAEliminar] = useState(null)
   const [nombreArchivoProcesando, setNombreArchivoProcesando] = useState("")
   const [filtro, setFiltro] = useState("todos")
   const [ordenarPor, setOrdenarPor] = useState("fecha-desc")
@@ -164,55 +168,45 @@ function InspeccionPanel({ empresaSeleccionada }) {
     }
   }
 
-  const eliminarArchivo = async (archivo) => {
-    const { isConfirmed } = await Swal.fire({
-      title: "¿Eliminar archivo?",
-      text: `¿Está seguro que desea eliminar "${archivo.nombre}"?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-      customClass: {
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
-    })
+  const eliminarArchivo = (archivo) => {
+    setArchivoAEliminar(archivo)
+    setMostrarModalEliminar(true)
+  }
 
-    if (!isConfirmed) return
+  const confirmarEliminarArchivo = async () => {
+    if (!archivoAEliminar) return
+
+    setMostrarModalEliminar(false)
+    setMostrarModalEliminando(true)
 
     try {
-      Swal.fire({
-        title: "Eliminando...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      })
-
       // Eliminar de Storage
-      const archivoRef = ref(storage, archivo.url)
+      const archivoRef = ref(storage, archivoAEliminar.url)
       await deleteObject(archivoRef).catch((err) => console.warn("Error al eliminar archivo de storage:", err))
 
       // Eliminar de Firestore
-      await deleteDoc(doc(db, "inspecciones", archivo.id))
+      await deleteDoc(doc(db, "inspecciones", archivoAEliminar.id))
 
       // Actualizar lista
-      setArchivos((prev) => prev.filter((a) => a.id !== archivo.id))
+      setArchivos((prev) => prev.filter((a) => a.id !== archivoAEliminar.id))
 
-      Swal.fire({
-        title: "Eliminado",
-        text: "El archivo ha sido eliminado correctamente",
-        icon: "success",
-        confirmButtonColor: "#ef4444",
-      })
+      setMostrarModalEliminando(false)
+      setMostrarModalEliminado(true)
+      setArchivoAEliminar(null)
+
+      setTimeout(() => {
+        setMostrarModalEliminado(false)
+      }, 2000)
     } catch (error) {
       console.error("Error al eliminar archivo:", error)
+      setMostrarModalEliminando(false)
       Swal.fire({
         title: "Error",
         text: "No se pudo eliminar el archivo",
         icon: "error",
         confirmButtonColor: "#ef4444",
       })
+      setArchivoAEliminar(null)
     }
   }
 
@@ -903,6 +897,132 @@ function InspeccionPanel({ empresaSeleccionada }) {
               {/* Botón */}
               <button
                 onClick={() => setMostrarModalExito(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminar */}
+      <AnimatePresence>
+        {mostrarModalEliminar && archivoAEliminar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setMostrarModalEliminar(false)
+              setArchivoAEliminar(null)
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-orange-100 p-2 rounded-full">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¿Eliminar archivo?</h3>
+                  <p className="text-sm text-gray-500">
+                    ¿Está seguro que desea eliminar "{archivoAEliminar.nombre}"?
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setMostrarModalEliminar(false)
+                    setArchivoAEliminar(null)
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminarArchivo}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Sí, eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminando */}
+      <AnimatePresence>
+        {mostrarModalEliminando && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <ArrowPathIcon className="h-6 w-6 text-red-600 animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Eliminando...</h3>
+                  <p className="text-sm text-gray-500">Por favor espere</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminado */}
+      <AnimatePresence>
+        {mostrarModalEliminado && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalEliminado(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Éxito!</h3>
+                  <p className="text-sm text-gray-500">Archivo eliminado correctamente</p>
+                </div>
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={() => setMostrarModalEliminado(false)}
                 className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
                 Aceptar

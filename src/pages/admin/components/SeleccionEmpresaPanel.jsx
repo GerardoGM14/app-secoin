@@ -7,7 +7,7 @@ import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firesto
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db, storage } from "../../../firebase/firebaseConfig"
 import Swal from "sweetalert2"
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid"
+import { CheckCircleIcon, XCircleIcon, MagnifyingGlassIcon, FunnelIcon, ArrowRightOnRectangleIcon } from "@heroicons/react/24/solid"
 
 function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
   const [empresas, setEmpresas] = useState([])
@@ -312,46 +312,13 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
 
       <div className="flex flex-col gap-6 mb-8">
         {/* Header con título y botón */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="animate-fade-in">
-            <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-700 p-2 rounded-lg">👥</span>
-              Seleccionar Empresa
-            </h2>
-            <p className="text-gray-600 mt-2">Gestiona los datos de una empresa desde tu panel de administrador.</p>
-          </div>
-
-          <button
-            onClick={cerrarSesion}
-            className="bg-gradient-to-r from-red-500 to-red-600 text-white px-5 py-2.5 rounded-lg shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-2 group"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 transition-transform duration-300 group-hover:rotate-90"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            Cerrar sesión
-          </button>
-        </div>
-
-        {/* Barra de búsqueda y filtros */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            {/* Barra de búsqueda */}
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-red-100 p-3 rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-400"
+                  className="h-6 w-6 text-red-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -360,66 +327,85 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Seleccionar Empresa</h2>
+                <p className="text-sm text-gray-500 mt-1">Gestiona los datos de una empresa desde tu panel de administrador</p>
+              </div>
+            </div>
+
+            <button
+              onClick={cerrarSesion}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+            >
+              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+
+        {/* Barra de búsqueda y filtros */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-center">
+            {/* Barra de búsqueda */}
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="text"
                 placeholder="Buscar empresa por correo o ID..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-gray-50/50 hover:bg-white"
+                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all duration-200 bg-gray-50/50 hover:bg-white"
               />
               {busqueda && (
                 <button
                   onClick={() => setBusqueda("")}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <XCircleIcon className="h-5 w-5" />
                 </button>
               )}
             </div>
 
             {/* Selector de ordenamiento */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+              <FunnelIcon className="h-5 w-5 text-gray-600" />
               <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Ordenar por:</label>
               <select
                 value={ordenamiento}
                 onChange={(e) => setOrdenamiento(e.target.value)}
-                className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white min-w-[140px]"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all duration-200 bg-white text-sm font-medium text-gray-700 min-w-[140px]"
               >
-                <option value="alfabetico">📝 Alfabético</option>
-                <option value="fecha">📅 Fecha registro</option>
-                <option value="id">🆔 ID</option>
+                <option value="alfabetico">Alfabético</option>
+                <option value="fecha">Fecha registro</option>
+                <option value="id">ID</option>
               </select>
             </div>
 
             {/* Contador de resultados */}
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h2a2 2 0 002 2v2a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 00-2 2h-2a2 2 0 00-2 2v6a2 2 0 01-2 2H9z"
-                />
-              </svg>
-              <span className="font-medium">
+            <div className="flex items-center gap-2 text-sm text-gray-700 bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+              <div className="bg-red-100 p-1.5 rounded-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-red-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2V7a2 2 0 012-2h2a2 2 0 002 2v2a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 00-2 2h-2a2 2 0 00-2 2v6a2 2 0 01-2 2H9z"
+                  />
+                </svg>
+              </div>
+              <span className="font-semibold text-gray-900">
                 {empresasFiltradas.length} de {empresas.length}
               </span>
             </div>
@@ -427,22 +413,24 @@ function SeleccionEmpresaPanel({ setEmpresaSeleccionada }) {
 
           {/* Indicador de búsqueda activa */}
           {busqueda && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>
+            <div className="mt-4 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100">
+              <div className="bg-blue-100 p-1.5 rounded-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <span className="font-medium">
                 Mostrando resultados para: <strong>"{busqueda}"</strong>
               </span>
             </div>

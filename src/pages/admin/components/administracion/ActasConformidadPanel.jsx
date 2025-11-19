@@ -6,6 +6,7 @@ import { collection, addDoc, getDocs, Timestamp, query, where, deleteDoc, doc } 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from "sweetalert2"
 import { motion, AnimatePresence } from "framer-motion"
+import { CheckCircleIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid"
 
 function ActasConformidadPanel({ empresaSeleccionada }) {
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
@@ -14,6 +15,13 @@ function ActasConformidadPanel({ empresaSeleccionada }) {
   const [filtroEstado, setFiltroEstado] = useState("todos")
   const [ordenamiento, setOrdenamiento] = useState("fecha-desc")
   const [cargando, setCargando] = useState(false)
+  const [mostrarModalCarga, setMostrarModalCarga] = useState(false)
+  const [mostrarModalExito, setMostrarModalExito] = useState(false)
+  const [nombreArchivoProcesando, setNombreArchivoProcesando] = useState("")
+  const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false)
+  const [mostrarModalEliminando, setMostrarModalEliminando] = useState(false)
+  const [mostrarModalEliminado, setMostrarModalEliminado] = useState(false)
+  const [archivoAEliminar, setArchivoAEliminar] = useState(null)
   const inputRef = useRef()
 
   useEffect(() => {
@@ -43,11 +51,8 @@ function ActasConformidadPanel({ empresaSeleccionada }) {
 
     try {
       setCargando(true)
-      Swal.fire({
-        title: "Subiendo...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      })
+      setNombreArchivoProcesando(archivoSeleccionado.name)
+      setMostrarModalCarga(true)
 
       const archivoRef = ref(storage, `actas_conformidad/${empresaSeleccionada.id}/${archivoSeleccionado.name}`)
       await uploadBytes(archivoRef, archivoSeleccionado)
@@ -66,41 +71,53 @@ function ActasConformidadPanel({ empresaSeleccionada }) {
       setComentario("")
       inputRef.current.value = ""
 
-      Swal.fire("Éxito", "Archivo subido correctamente.", "success")
+      setMostrarModalCarga(false)
+      setMostrarModalExito(true)
 
       const q = query(collection(db, "actas_conformidad"), where("empresaId", "==", empresaSeleccionada.id))
       const snap = await getDocs(q)
       const archivosFiltrados = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
       setArchivos(archivosFiltrados)
+
+      setTimeout(() => {
+        setMostrarModalExito(false)
+      }, 2000)
     } catch (error) {
       console.error(error)
+      setMostrarModalCarga(false)
       Swal.fire("Error", "No se pudo subir el archivo.", "error")
     } finally {
       setCargando(false)
     }
   }
 
-  const eliminarArchivo = async (id, nombre) => {
-    const result = await Swal.fire({
-      title: "¿Eliminar acta de conformidad?",
-      text: `Se eliminará "${nombre}"`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-    })
+  const eliminarArchivo = (id, nombre) => {
+    setArchivoAEliminar({ id, nombre })
+    setMostrarModalEliminar(true)
+  }
 
-    if (result.isConfirmed) {
-      try {
-        await deleteDoc(doc(db, "actas_conformidad", id))
-        setArchivos(archivos.filter((archivo) => archivo.id !== id))
-        Swal.fire("Eliminado", "El acta de conformidad ha sido eliminada.", "success")
-      } catch (error) {
-        console.error(error)
-        Swal.fire("Error", "No se pudo eliminar el acta de conformidad.", "error")
-      }
+  const confirmarEliminarArchivo = async () => {
+    if (!archivoAEliminar) return
+
+    setMostrarModalEliminar(false)
+    setMostrarModalEliminando(true)
+
+    try {
+      await deleteDoc(doc(db, "actas_conformidad", archivoAEliminar.id))
+      setArchivos(archivos.filter((archivo) => archivo.id !== archivoAEliminar.id))
+
+      setMostrarModalEliminando(false)
+      setMostrarModalEliminado(true)
+      setArchivoAEliminar(null)
+
+      setTimeout(() => {
+        setMostrarModalEliminado(false)
+      }, 2000)
+    } catch (error) {
+      console.error(error)
+      setMostrarModalEliminando(false)
+      Swal.fire("Error", "No se pudo eliminar el acta de conformidad.", "error")
+      setArchivoAEliminar(null)
     }
   }
 
@@ -531,6 +548,191 @@ function ActasConformidadPanel({ empresaSeleccionada }) {
           </div>
         </motion.div>
       )}
+
+      {/* Modal de Carga */}
+      <AnimatePresence>
+        {mostrarModalCarga && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <ArrowPathIcon className="h-6 w-6 text-red-600 animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Subiendo archivo...</h3>
+                  <p className="text-sm text-gray-500">Procesando {nombreArchivoProcesando}</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Éxito */}
+      <AnimatePresence>
+        {mostrarModalExito && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalExito(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Éxito!</h3>
+                  <p className="text-sm text-gray-500">Acta de conformidad subida correctamente</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMostrarModalExito(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminar */}
+      <AnimatePresence>
+        {mostrarModalEliminar && archivoAEliminar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setMostrarModalEliminar(false)
+              setArchivoAEliminar(null)
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-orange-100 p-2 rounded-full">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¿Eliminar acta de conformidad?</h3>
+                  <p className="text-sm text-gray-500">
+                    ¿Está seguro que desea eliminar "{archivoAEliminar.nombre}"?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setMostrarModalEliminar(false)
+                    setArchivoAEliminar(null)
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminarArchivo}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Sí, eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminando */}
+      <AnimatePresence>
+        {mostrarModalEliminando && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <ArrowPathIcon className="h-6 w-6 text-red-600 animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Eliminando...</h3>
+                  <p className="text-sm text-gray-500">Por favor espere</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Eliminado */}
+      <AnimatePresence>
+        {mostrarModalEliminado && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setMostrarModalEliminado(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">¡Éxito!</h3>
+                  <p className="text-sm text-gray-500">Acta de conformidad eliminada correctamente</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMostrarModalEliminado(false)}
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Aceptar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
