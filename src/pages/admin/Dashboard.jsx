@@ -5,6 +5,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  Area,
+  AreaChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,6 +17,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  LabelList,
 } from "recharts"
 import { motion } from "framer-motion"
 import Sidebar from "./components/Sidebar"
@@ -80,9 +83,19 @@ function Dashboard() {
       setConteoInspecciones(snapInspecciones.size)
 
       // Conteo de Informes
+      // Buscar por empresaId primero, si no hay resultados, buscar por empresaCorreo
       const qInformes = query(collection(db, "informes"), where("empresaId", "==", empresaSeleccionada.id))
       const snapInformes = await getDocs(qInformes)
-      setConteoInformes(snapInformes.size)
+      
+      // Si no hay resultados con empresaId, intentar con empresaCorreo
+      let conteoInformes = snapInformes.size
+      if (conteoInformes === 0 && empresaSeleccionada.correo) {
+        const qInformesCorreo = query(collection(db, "informes"), where("empresaCorreo", "==", empresaSeleccionada.correo))
+        const snapInformesCorreo = await getDocs(qInformesCorreo)
+        conteoInformes = snapInformesCorreo.size
+      }
+      
+      setConteoInformes(conteoInformes)
 
       // Conteo de Capacitaciones (general)
       const snapCapacitaciones = await getDocs(collection(db, "capacitaciones"))
@@ -96,10 +109,28 @@ function Dashboard() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-900/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-gray-800">
-          <p className="text-gray-300 text-sm font-medium">{`${label}`}</p>
-          <p className="text-white font-bold">{`${payload[0].value} ${payload[0].name === "inspecciones" ? "Inspecciones" : payload[0].name
-            }`}</p>
+        <div className="bg-white backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-200">
+          <p className="text-gray-500 text-xs font-semibold mb-2 uppercase tracking-wide">{`${label}`}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-gray-900 text-2xl font-bold">{`${payload[0].value}`}</p>
+            <p className="text-gray-500 text-sm">{payload[0].name === "inspecciones" ? "Inspecciones" : payload[0].name}</p>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Tooltip personalizado para barras
+  const CustomBarTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-200">
+          <p className="text-gray-500 text-xs font-semibold mb-2 uppercase tracking-wide">{`${label}`}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-gray-900 text-2xl font-bold">{`${payload[0].value}`}</p>
+            <p className="text-gray-500 text-sm">Documentos</p>
+          </div>
         </div>
       )
     }
@@ -129,10 +160,52 @@ function Dashboard() {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    // Buscar la cantidad en dataDashboard
+    const entry = dataDashboard.find(item => item.nombre === nombre);
+    const cantidad = entry ? entry.cantidad : 0;
 
     return (
-      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12}>
-        {`${nombre} ${(percent * 100).toFixed(0)}%`}
+      <g>
+        <text 
+          x={x} 
+          y={y - 8} 
+          fill="#1f2937" 
+          textAnchor="middle" 
+          dominantBaseline="central" 
+          fontSize={13}
+          fontWeight="600"
+        >
+          {nombre}
+        </text>
+        <text 
+          x={x} 
+          y={y + 8} 
+          fill="#6b7280" 
+          textAnchor="middle" 
+          dominantBaseline="central" 
+          fontSize={11}
+          fontWeight="500"
+        >
+          {cantidad} ({(percent * 100).toFixed(0)}%)
+        </text>
+      </g>
+    );
+  };
+
+  // Componente para etiquetas de barras
+  const CustomBarLabel = ({ x, y, width, value }) => {
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 8}
+        fill="#1f2937"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize={14}
+        fontWeight="600"
+      >
+        {value}
       </text>
     );
   };
@@ -344,181 +417,203 @@ function Dashboard() {
                     {/* Gráfico de Tendencia de Inspecciones */}
                     <motion.div
                       variants={itemVariants}
-                      className="bg-white p-6 rounded-xl shadow-md border border-gray-100 lg:col-span-2"
+                      className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 lg:col-span-2 relative overflow-hidden"
                     >
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-gray-800">Tendencia de Inspecciones</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Últimos 6 meses</span>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                              />
-                            </svg>
-                          </button>
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full -mr-32 -mt-32"></div>
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-8">
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">Tendencia de Inspecciones</h3>
+                            <p className="text-sm text-gray-500">Evolución mensual de inspecciones</p>
+                          </div>
+                          <div className="flex items-center gap-3 bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className="text-xs font-medium text-gray-700">Últimos 6 meses</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={dataTendencia} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="colorInspecciones" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                            <XAxis
-                              dataKey="mes"
-                              axisLine={false}
-                              tickLine={false}
-                              tick={{ fill: "#6b7280", fontSize: 12 }}
-                            />
-                            <YAxis
-                              allowDecimals={false}
-                              axisLine={false}
-                              tickLine={false}
-                              tick={{ fill: "#6b7280", fontSize: 12 }}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Line
-                              type="monotone"
-                              dataKey="inspecciones"
-                              stroke="#ef4444"
-                              strokeWidth={3}
-                              dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
-                              activeDot={{ r: 6, strokeWidth: 0, fill: "#ef4444" }}
-                            />
-                            <CartesianGrid stroke="#f5f5f5" />
-                            <area
-                              type="monotone"
-                              dataKey="inspecciones"
-                              stroke="none"
-                              fillOpacity={1}
-                              fill="url(#colorInspecciones)"
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={dataTendencia} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+                              <defs>
+                                <linearGradient id="colorInspecciones" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" strokeWidth={1} />
+                              <XAxis
+                                dataKey="mes"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: "#6b7280", fontSize: 13, fontWeight: 500 }}
+                                padding={{ left: 10, right: 10 }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: "#6b7280", fontSize: 13, fontWeight: 500 }}
+                              />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Area
+                                type="monotone"
+                                dataKey="inspecciones"
+                                stroke="#ef4444"
+                                strokeWidth={4}
+                                fill="url(#colorInspecciones)"
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="inspecciones"
+                                stroke="#ef4444"
+                                strokeWidth={4}
+                                dot={{ r: 6, strokeWidth: 3, stroke: "#fff", fill: "#ef4444" }}
+                                activeDot={{ r: 8, strokeWidth: 3, stroke: "#fff", fill: "#ef4444" }}
+                                animationDuration={1000}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     </motion.div>
 
                     {/* Gráfico de Distribución */}
                     <motion.div
                       variants={itemVariants}
-                      className="bg-white p-6 rounded-xl shadow-md border border-gray-100"
+                      className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 relative overflow-hidden"
                     >
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-gray-800">Distribución de Actividades</h3>
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="h-72 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={dataDashboard}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={80}
-                              paddingAngle={5}
-                              dataKey="cantidad"
-                              nameKey="nombre"
-                              label={renderCustomizedLabel}
-                              labelLine={false}
-                            >
-                              {dataDashboard.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                            <Legend
-                              layout="vertical"
-                              verticalAlign="middle"
-                              align="right"
-                              iconType="circle"
-                              iconSize={10}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
+                      <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full -mr-24 -mt-24"></div>
+                      <div className="relative z-10">
+                        <div className="mb-8">
+                          <h3 className="text-xl font-bold text-gray-900 mb-1">Distribución de Actividades</h3>
+                          <p className="text-sm text-gray-500">Proporción de actividades</p>
+                        </div>
+                        <div className="h-80 flex items-center justify-center">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <defs>
+                                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                  <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                                  <feOffset dx="2" dy="2" result="offsetblur"/>
+                                  <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.3"/>
+                                  </feComponentTransfer>
+                                  <feMerge>
+                                    <feMergeNode/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                  </feMerge>
+                                </filter>
+                              </defs>
+                              <Pie
+                                data={dataDashboard}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={110}
+                                paddingAngle={8}
+                                dataKey="cantidad"
+                                nameKey="nombre"
+                                label={renderCustomizedLabel}
+                                labelLine={false}
+                                animationDuration={1000}
+                              >
+                                {dataDashboard.map((entry, index) => (
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={entry.color} 
+                                    stroke="#fff" 
+                                    strokeWidth={3}
+                                    filter="url(#shadow)"
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                contentStyle={{
+                                  backgroundColor: "#fff",
+                                  border: "1px solid #e5e7eb",
+                                  borderRadius: "12px",
+                                  padding: "12px",
+                                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+                                }}
+                                formatter={(value, name) => [value, name]}
+                              />
+                              <Legend
+                                layout="vertical"
+                                verticalAlign="middle"
+                                align="right"
+                                iconType="circle"
+                                iconSize={14}
+                                wrapperStyle={{ fontSize: "13px", fontWeight: 500, paddingLeft: "20px" }}
+                                formatter={(value, entry) => (
+                                  <span style={{ color: entry.color, fontWeight: 600 }}>{value}</span>
+                                )}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     </motion.div>
 
                     {/* Gráfico de Comparación General */}
                     <motion.div
                       variants={itemVariants}
-                      className="bg-white p-6 rounded-xl shadow-md border border-gray-100 lg:col-span-3"
+                      className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 lg:col-span-3 relative overflow-hidden"
                     >
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-gray-800">Resumen General</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Datos actuales</span>
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                              />
-                            </svg>
-                          </button>
+                      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full -mr-48 -mt-48"></div>
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-8">
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">Resumen General</h3>
+                            <p className="text-sm text-gray-500">Comparación de todas las actividades</p>
+                          </div>
+                          <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                            <span className="text-xs font-medium text-gray-600">Datos actuales</span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={dataDashboard} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                            <XAxis
-                              dataKey="nombre"
-                              axisLine={false}
-                              tickLine={false}
-                              tick={{ fill: "#6b7280", fontSize: 12 }}
-                            />
-                            <YAxis
-                              allowDecimals={false}
-                              axisLine={false}
-                              tickLine={false}
-                              tick={{ fill: "#6b7280", fontSize: 12 }}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Bar dataKey="cantidad" barSize={60} radius={[10, 10, 0, 0]} animationDuration={1500}>
-                              {dataDashboard.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dataDashboard} margin={{ top: 30, right: 30, left: 0, bottom: 10 }}>
+                              <defs>
+                                <linearGradient id="gradientRed" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
+                                  <stop offset="100%" stopColor="#dc2626" stopOpacity={1} />
+                                </linearGradient>
+                                <linearGradient id="gradientGreen" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                                  <stop offset="100%" stopColor="#059669" stopOpacity={1} />
+                                </linearGradient>
+                                <linearGradient id="gradientPurple" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
+                                  <stop offset="100%" stopColor="#7c3aed" stopOpacity={1} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" strokeWidth={1} />
+                              <XAxis
+                                dataKey="nombre"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: "#6b7280", fontSize: 13, fontWeight: 500 }}
+                                padding={{ left: 20, right: 20 }}
+                              />
+                              <YAxis
+                                allowDecimals={false}
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: "#6b7280", fontSize: 13, fontWeight: 500 }}
+                              />
+                              <Tooltip content={<CustomBarTooltip />} />
+                              <Bar dataKey="cantidad" barSize={80} radius={[12, 12, 0, 0]} animationDuration={1500}>
+                                {dataDashboard.map((entry, index) => {
+                                  let gradientId = "gradientRed"
+                                  if (entry.color === "#10b981") gradientId = "gradientGreen"
+                                  if (entry.color === "#8b5cf6") gradientId = "gradientPurple"
+                                  return <Cell key={`cell-${index}`} fill={`url(#${gradientId})`} />
+                                })}
+                                <LabelList content={<CustomBarLabel />} />
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
                       </div>
                     </motion.div>
                   </div>
