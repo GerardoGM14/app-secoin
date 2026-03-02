@@ -31,6 +31,9 @@ function CertificadoGenerator({
   const [mensajeError, setMensajeError] = useState("")
   const certificadoRef = useRef()
 
+  // URL base para validación de certificados
+  const URL_BASE_CERTIFICADO = "https://certificado.redsecoin.com"
+
   console.log("🏆 CertificadoGenerator - Iniciando")
   console.log("👤 Datos usuario:", datosUsuario)
   console.log("📚 Datos curso:", datosCurso)
@@ -74,7 +77,7 @@ function CertificadoGenerator({
       console.log("💾 Certificado guardado en Firebase:", idCertificado)
 
       // URL para validación del QR
-      const urlValidacion = `${window.location.origin}/validar-certificado/${idCertificado}`
+      const urlValidacion = `${URL_BASE_CERTIFICADO}/certificado/${idCertificado}`
 
       // Generar código QR para validación (URL)
       const qrUrl = await QRCode.toDataURL(urlValidacion, {
@@ -192,7 +195,7 @@ function CertificadoGenerator({
   }
 
   const compartirCertificado = async () => {
-    const urlValidacion = `${window.location.origin}/validar-certificado/${certificadoId}`
+    const urlValidacion = `${URL_BASE_CERTIFICADO}/certificado/${certificadoId}`
     const texto = `🎉 ¡He completado exitosamente la capacitación "${datosCurso.titulo}"!\n\n📊 Nota obtenida: ${notaObtenida}/20\n🏢 Empresa: ${datosUsuario.empresaUsuario}\n\n🔗 Validar certificado: ${urlValidacion}`
 
     if (navigator.share) {

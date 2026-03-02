@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "extintores-app"
-  }
+  },
+  "targets": {
+    "extintores-app": {
+      "hosting": {
+        "extintores": [
+          "extintores"
+        ],
+        "extintores-app": [
+          "extintores-app"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
