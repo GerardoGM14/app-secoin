@@ -42,7 +42,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
     { id: "informes", label: "Informes", icon: <DocumentChartBarIcon className="h-5 w-5" /> },
     { id: "capacitacion", label: "Capacitación", icon: <AcademicCapIcon className="h-5 w-5" /> },
     { id: "mensajes", label: "Mensajes", icon: <ChatBubbleLeftEllipsisIcon className="h-5 w-5" /> },
-    { id: "monitoreo", label: "Monitoreo", icon: <MapPinIcon className="h-5 w-5" />, route: "/admin/monitoreo" },
+    { id: "monitoreo", label: "Monitoreo", icon: <MapPinIcon className="h-5 w-5" /> },
     { id: "administracion", label: "Documentos", icon: <FolderIcon className="h-5 w-5" /> },
   ]
 

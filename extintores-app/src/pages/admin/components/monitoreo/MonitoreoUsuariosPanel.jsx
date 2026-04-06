@@ -29,6 +29,12 @@ function MonitoreoUsuariosPanel() {
           })
         })
         setUsuarios(usuariosData)
+        // Actualizar el usuario seleccionado con los datos frescos
+        setUsuarioSeleccionado((prev) => {
+          if (!prev) return null
+          const actualizado = usuariosData.find((u) => u.id === prev.id)
+          return actualizado || null
+        })
         setCargando(false)
       },
       (error) => {
@@ -61,98 +67,82 @@ function MonitoreoUsuariosPanel() {
   }, [usuarioSeleccionado])
 
   const cargarGoogleMaps = () => {
-    // Verificar si el script ya está cargado
-    if (window.google && window.google.maps) {
-      inicializarMapa()
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+
+    if (!apiKey || apiKey === "TU_API_KEY_AQUI") {
+      console.warn("API Key de Google Maps no configurada.")
       return
     }
 
-    // Obtener API key desde variable de entorno o configuración
-    // IMPORTANTE: Agrega tu API key de Google Maps en un archivo .env
-    // VITE_GOOGLE_MAPS_API_KEY=tu_api_key_aqui
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "TU_API_KEY_AQUI"
-
-    if (apiKey === "TU_API_KEY_AQUI") {
-      console.warn("⚠️ API Key de Google Maps no configurada. Por favor, agrega VITE_GOOGLE_MAPS_API_KEY en tu archivo .env")
-      // Mostrar mensaje al usuario
-      const mapElement = document.getElementById("mapa-usuario")
-      if (mapElement) {
-        mapElement.innerHTML = `
-          <div class="flex items-center justify-center h-full bg-gray-100">
-            <div class="text-center p-8">
-              <p class="text-gray-600 mb-2">⚠️ API Key de Google Maps no configurada</p>
-              <p class="text-sm text-gray-500">Por favor, configura VITE_GOOGLE_MAPS_API_KEY en tu archivo .env</p>
-            </div>
-          </div>
-        `
+    return new Promise((resolve, reject) => {
+      // Si ya existe el script, no volver a cargarlo
+      if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+        setMapaCargado(true)
+        inicializarMapa()
+        resolve()
+        return
       }
-      return
-    }
 
-    // Cargar el script de Google Maps
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      setMapaCargado(true)
-      inicializarMapa()
-    }
-    script.onerror = () => {
-      console.error("Error al cargar Google Maps")
-      const mapElement = document.getElementById("mapa-usuario")
-      if (mapElement) {
-        mapElement.innerHTML = `
-          <div class="flex items-center justify-center h-full bg-gray-100">
-            <div class="text-center p-8">
-              <p class="text-red-600 mb-2">❌ Error al cargar Google Maps</p>
-              <p class="text-sm text-gray-500">Verifica que tu API Key sea válida</p>
-            </div>
-          </div>
-        `
+      const script = document.createElement("script")
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=marker&v=weekly`
+      script.async = true
+      script.defer = true
+
+      script.onload = () => {
+        console.log("Google Maps cargado correctamente")
+        setMapaCargado(true)
+        inicializarMapa()
+        resolve()
       }
-    }
-    document.head.appendChild(script)
+
+      script.onerror = (error) => {
+        console.error("Error al cargar Google Maps:", error)
+        reject(error)
+      }
+
+      document.head.appendChild(script)
+    })
   }
 
-  const inicializarMapa = () => {
-    if (!usuarioSeleccionado?.ubicacion || !window.google) return
+  const inicializarMapa = async () => {
+    if (!usuarioSeleccionado?.ubicacion) return
 
     const { lat, lng } = usuarioSeleccionado.ubicacion
     const mapElement = document.getElementById("mapa-usuario")
 
     if (!mapElement) return
 
-    const mapa = new window.google.maps.Map(mapElement, {
-      center: { lat, lng },
-      zoom: 15,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-    })
-
-    // Agregar marcador
-    new window.google.maps.Marker({
-      position: { lat, lng },
-      map: mapa,
-      title: usuarioSeleccionado.nombre || usuarioSeleccionado.correo,
-      icon: {
-        url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-      },
-    })
-
-    // Agregar círculo de precisión si hay información de accuracy
-    if (usuarioSeleccionado.ubicacion.accuracy) {
-      new window.google.maps.Circle({
-        strokeColor: "#FF0000",
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: "#FF0000",
-        fillOpacity: 0.15,
-        map: mapa,
+    try {
+      const mapa = new window.google.maps.Map(mapElement, {
         center: { lat, lng },
-        radius: usuarioSeleccionado.ubicacion.accuracy,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
       })
+
+      // Marcador estándar
+      new window.google.maps.Marker({
+        position: { lat, lng },
+        map: mapa,
+        title: usuarioSeleccionado.nombre || usuarioSeleccionado.correo,
+      })
+
+      // Agregar círculo de precisión
+      if (usuarioSeleccionado.ubicacion.accuracy) {
+        new window.google.maps.Circle({
+          strokeColor: "#ef4444",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: "#ef4444",
+          fillOpacity: 0.1,
+          map: mapa,
+          center: { lat, lng },
+          radius: usuarioSeleccionado.ubicacion.accuracy,
+        })
+      }
+    } catch (error) {
+      console.error("Error al inicializar el mapa:", error)
     }
   }
 

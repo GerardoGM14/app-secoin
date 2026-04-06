@@ -36,11 +36,15 @@ import InformesDetalladosPanel from "./components/administracion/InformesDetalla
 import FacturasPanel from "./components/administracion/FacturasPanel"
 import CertificadoOp from "./components/administracion/CertificadoOp"
 import GuiasPrestamoPanel from "./components/administracion/GuiasPrestamoPanel"
+import MonitoreoUsuariosPanel from "./components/monitoreo/MonitoreoUsuariosPanel"
 import MensajesPanel from "./components/mensajes/MensajesPanel"
 
 function Dashboard() {
   const [seccionActiva, setSeccionActiva] = useState("inicio")
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null)
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(() => {
+    const local = localStorage.getItem("empresaSeleccionadaAdmin")
+    return local ? JSON.parse(local) : null
+  })
   const [conteoInspecciones, setConteoInspecciones] = useState(0)
   const [conteoInformes, setConteoInformes] = useState(0)
   const [conteoCapacitaciones, setConteoCapacitaciones] = useState(0)
@@ -48,8 +52,11 @@ function Dashboard() {
 
   useEffect(() => {
     if (empresaSeleccionada) {
+      localStorage.setItem("empresaSeleccionadaAdmin", JSON.stringify(empresaSeleccionada))
       setCargando(true)
       cargarDatosDashboard().finally(() => setCargando(false))
+    } else {
+      localStorage.removeItem("empresaSeleccionadaAdmin")
     }
   }, [empresaSeleccionada])
 
@@ -655,6 +662,8 @@ function Dashboard() {
           {seccionActiva === "administracion-certificado" && (
             <CertificadoOp empresaSeleccionada={empresaSeleccionada} />
           )}
+
+          {seccionActiva === "monitoreo" && <MonitoreoUsuariosPanel />}
 
         </main>
       </div>

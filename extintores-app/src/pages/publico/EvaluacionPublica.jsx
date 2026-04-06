@@ -303,13 +303,18 @@ function EvaluacionPublica() {
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={dniUsuario}
                     onChange={async (e) => {
-                      setDniUsuario(e.target.value)
-                      if (e.target.value.trim().length >= 8) {
-                        await verificarDni()
-                      } else {
-                        setDniYaUsado(false)
+                      const val = e.target.value.replace(/\D/g, "")
+                      if (val.length <= 8) {
+                        setDniUsuario(val)
+                        if (val.length === 8) {
+                          await verificarDni()
+                        } else {
+                          setDniYaUsado(false)
+                        }
                       }
                     }}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
