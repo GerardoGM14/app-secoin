@@ -87,16 +87,16 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 h-screen sticky top-0 bg-white border-r border-gray-200 shadow-xl z-30 transition-all duration-300">
+    <aside className="w-72 flex-shrink-0 h-screen sticky top-0 bg-white border-r border-gray-100 flex flex-col z-30 transition-all duration-300">
       {/* Decoración de fondo */}
-      <div className="absolute inset-0 z-0 opacity-5">
+      <div className="absolute inset-0 z-0 opacity-5 pointer-events-none overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-red-500 rounded-full -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-0 w-60 h-60 bg-red-500 rounded-full -ml-20 -mb-20"></div>
       </div>
 
-      <div className="relative z-10 px-6 py-8">
+      <div className="relative z-10 px-6 pt-8 pb-2">
         {/* Header del sidebar */}
-        <div className="mb-10 text-center">
+        <div className="mb-4 text-center">
           <div className="relative inline-block">
             {logoURL ? (
               <div className="mb-4 flex justify-center">
@@ -119,10 +119,13 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
             <div className="mt-1 text-xs text-gray-500 font-medium">Panel de Control</div>
           </div>
         </div>
+      </div>
 
-        {/* Navegación - Contenedor con scroll */}
-        <div className="overflow-y-auto max-h-[calc(100vh-160px)] pr-1 -mr-1">
-          <motion.nav className="flex flex-col gap-1 pb-24" initial="hidden" animate="visible" variants={containerVariants}>
+      {/* Área del cuerpo con scroll oculto */}
+      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative z-10">
+        {/* Navegación */}
+        <div className="flex-1 px-4 pr-1">
+          <motion.nav className="flex flex-col gap-1 pb-10" initial="hidden" animate="visible" variants={containerVariants}>
             {menu.map((item, index) => {
               if (item.id === "administracion") {
                 return (
@@ -264,8 +267,8 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
           </motion.nav>
         </div>
 
-        {/* Footer del sidebar con Cerrar Sesión integrado */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-100 flex flex-col gap-3">
+        {/* Footer del sidebar con Cerrar Sesión integrado (ahora dentro del scroll) */}
+        <div className="p-4 mt-auto border-t border-gray-100 flex flex-col gap-3 bg-white">
           <button
             onClick={() => {
               localStorage.removeItem("usuario")
