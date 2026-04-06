@@ -64,7 +64,7 @@ function App() {
         {/* ================================ */}
 
         {/* Ruta raíz - Pantalla de login */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Login setUsuario={setUsuario} />} />
         <Route path="/registro" element={<Registro />} />
 
         {/* Registro público de trabajadores */}

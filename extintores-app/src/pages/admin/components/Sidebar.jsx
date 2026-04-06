@@ -87,7 +87,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
   }
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 min-h-screen shadow-lg relative overflow-hidden">
+    <aside className="w-64 flex-shrink-0 h-screen sticky top-0 bg-white border-r border-gray-200 shadow-xl z-30 transition-all duration-300">
       {/* Decoración de fondo */}
       <div className="absolute inset-0 z-0 opacity-5">
         <div className="absolute top-0 right-0 w-40 h-40 bg-red-500 rounded-full -mr-20 -mt-20"></div>
@@ -99,16 +99,17 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
         <div className="mb-10 text-center">
           <div className="relative inline-block">
             {logoURL ? (
-              <div className="relative group">
-                <div className="absolute inset-0 bg-red-500 rounded-full blur-md opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                <img
-                  src={logoURL || "/placeholder.svg"}
-                  alt="Logo"
-                  className="h-16 w-16 object-cover mx-auto mb-3 rounded-full border-2 border-white shadow-lg relative z-10 transition-transform duration-300 hover:scale-105"
-                />
+              <div className="mb-4 flex justify-center">
+                <div className="bg-white p-3 rounded-2xl border border-gray-200 inline-block w-full max-w-[200px] flex justify-center">
+                  <img
+                    src={logoURL}
+                    alt="Logo del Sistema"
+                    className="max-h-24 w-auto max-w-full object-contain mix-blend-multiply"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="h-16 w-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+              <div className="h-14 w-14 mx-auto mb-4 rounded-xl bg-red-600 flex items-center justify-center text-white text-2xl font-bold shadow-sm">
                 {nombreSistema.charAt(0)}
               </div>
             )}
@@ -120,15 +121,15 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
         </div>
 
         {/* Navegación - Contenedor con scroll */}
-        <div className="overflow-y-auto max-h-[calc(100vh-220px)] pr-1 -mr-1">
-          <motion.nav className="flex flex-col gap-2" initial="hidden" animate="visible" variants={containerVariants}>
+        <div className="overflow-y-auto max-h-[calc(100vh-160px)] pr-1 -mr-1">
+          <motion.nav className="flex flex-col gap-1 pb-24" initial="hidden" animate="visible" variants={containerVariants}>
             {menu.map((item, index) => {
               if (item.id === "administracion") {
                 return (
                   <motion.div key={index} className="flex flex-col" variants={itemVariants}>
                     <button
                       onClick={() => setSubMenuAdministracion(!subMenuAdministracion)}
-                      className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                      className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                         seccionActiva?.includes("administracion")
                           ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                           : "text-gray-700 hover:bg-red-50 hover:text-red-600"
@@ -166,7 +167,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                               key={subIndex}
                               variants={subItemVariants}
                               onClick={() => setSeccionActiva(subItem.id)}
-                              className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 ${
+                              className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${
                                 seccionActiva === subItem.id
                                   ? "bg-red-100 text-red-700 font-medium"
                                   : "text-gray-600 hover:bg-red-50/50 hover:text-red-600"
@@ -195,7 +196,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                       setSeccionActiva(item.id)
                     }
                   }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium cursor-pointer ${
                     isActive || (item.route && location.pathname === item.route)
                       ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                       : "text-gray-700 hover:bg-red-50 hover:text-red-600"
@@ -212,7 +213,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
             <motion.div className="flex flex-col mt-1" variants={itemVariants}>
               <button
                 onClick={() => setSubMenuHerramientas(!subMenuHerramientas)}
-                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
                   seccionActiva?.includes("herramientas")
                     ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                     : "text-gray-700 hover:bg-red-50 hover:text-red-600"
@@ -246,7 +247,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                         key={subIndex}
                         variants={subItemVariants}
                         onClick={() => setSeccionActiva(subItem.id)}
-                        className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 ${
+                        className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${
                           seccionActiva === subItem.id
                             ? "bg-red-100 text-red-700 font-medium"
                             : "text-gray-600 hover:bg-red-50/50 hover:text-red-600"
@@ -263,11 +264,24 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
           </motion.nav>
         </div>
 
-        {/* Footer del sidebar */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200">
-          <div className="text-xs text-center text-gray-500">
-            <span className="block opacity-70">© {new Date().getFullYear()} SECOIN</span>
-            <span className="block mt-1 opacity-50">v1.2.0</span>
+        {/* Footer del sidebar con Cerrar Sesión integrado */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-100 flex flex-col gap-3">
+          <button
+            onClick={() => {
+              localStorage.removeItem("usuario")
+              localStorage.removeItem("empresaSeleccionadaAdmin")
+              window.location.href = "/"
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-300 font-bold text-xs cursor-pointer group border border-transparent hover:border-red-100"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
+          
+          <div className="text-[10px] text-center text-gray-400 font-medium">
+            <span className="opacity-70">© {new Date().getFullYear()} SECOIN • v1.5.0</span>
           </div>
         </div>
       </div>

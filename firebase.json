@@ -1,7 +1,7 @@
 {
   "functions": [
     {
-      "source": "functions",
+      "source": "extintores-app/functions",
       "codebase": "default",
       "ignore": [
         "node_modules",
@@ -15,7 +15,7 @@
   "hosting": [
     {
       "target": "extintores-app",
-      "public": "dist",
+      "public": "extintores-app/dist",
       "ignore": [
         "firebase.json",
         "**/.*",
@@ -27,7 +27,7 @@
     },
     {
       "target": "extintores",
-      "public": "dist",
+      "public": "certificado-secoin/dist",
       "ignore": [
         "firebase.json",
         "**/.*",

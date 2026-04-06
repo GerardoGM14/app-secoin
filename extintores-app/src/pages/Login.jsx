@@ -17,7 +17,7 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/solid"
 
-function Login() {
+function Login({ setUsuario }) {
   const [correo, setCorreo] = useState("")
   const [contrasena, setContrasena] = useState("")
   const [error, setError] = useState("")
@@ -188,6 +188,8 @@ function Login() {
     const verificacion = localStorage.getItem("usuario")
     if (verificacion) {
       console.log("✅ Sesión verificada:", JSON.parse(verificacion))
+      // Actualizar el estado global del usuario para evitar bucles de redirección
+      setUsuario?.(datosCompletos)
       return true
     } else {
       console.error("❌ Error: No se pudo verificar la sesión guardada")

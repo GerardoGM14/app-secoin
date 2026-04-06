@@ -129,95 +129,172 @@ function EditarEmpresaPanel({ empresaId }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4 }}
-      className="bg-white p-6 rounded-xl shadow-md max-w-3xl mx-auto mt-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-4xl mx-auto p-6"
     >
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-        <BuildingOffice2Icon className="h-6 w-6 text-blue-600" /> Editar Datos de Empresa
-      </h2>
-
-      <div className="space-y-6">
-        {/* Campo RUC */}
-        <div>
-          <label className="text-sm font-medium text-gray-700">RUC</label>
-          <div className="flex gap-2 items-center">
-
-            <input
-              type="text"
-              value={ruc}
-              onChange={(e) => setRuc(e.target.value)}
-              disabled={empresa?.rucValidado}
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Ej: 20123456789"
-            />
-
-            {/* Si NO ha validado todavía, muestra botón VALIDAR */}
-            {!empresa?.rucValidado && (
-              <button
-                onClick={validarRUC}
-                className="h-[42px] bg-blue-600 text-white px-3 rounded-md hover:bg-blue-700 transition"
-              >
-                Validar
-              </button>
-            )}
-
-            {/* Si YA está validado, muestra botón EDITAR */}
-            {empresa?.rucValidado && (
-              <button
-                onClick={() => {
-                  setMostrarModalPin(true);
-                  setPinInput('');
-                }}
-                className="h-[42px] px-5 bg-yellow-400 text-white font-semibold rounded-md hover:bg-yellow-500 transition"
-              >
-                Editar
-              </button>
-            )}
-
+      {/* Header Profesional */}
+      <div className="bg-white rounded-t-2xl p-6 border-x border-t border-gray-200 shadow-sm relative overflow-hidden">
+        <div className="flex items-center gap-5">
+          <div className="bg-red-50 p-4 rounded-2xl shadow-sm border border-red-100">
+            <BuildingOffice2Icon className="h-8 w-8 text-red-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Datos de Empresa</h1>
+            <p className="text-gray-500 font-medium text-sm mt-0.5">Gestión de RUC, razón social e identidad visual</p>
           </div>
         </div>
+      </div>
 
+      {/* Contenido principal */}
+      <div className="bg-white rounded-b-2xl shadow-sm border-x border-b border-gray-200 overflow-hidden">
+        <div className="p-6 space-y-8">
+          
+          {/* Sección RUC */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-6 bg-red-500 rounded-full"></div>
+              <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">Información Fiscal</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div className="md:col-span-3 space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase ml-1">Número de RUC</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                      <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={ruc}
+                    onChange={(e) => setRuc(e.target.value)}
+                    disabled={empresa?.rucValidado}
+                    className={`w-full pl-11 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-sm font-medium ${
+                      empresa?.rucValidado 
+                        ? "bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed" 
+                        : "bg-white border-gray-300 hover:border-gray-400"
+                    }`}
+                    placeholder="20123456789"
+                    maxLength="11"
+                  />
+                  {empresa?.rucValidado && (
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                      <CheckCircleIcon className="h-6 w-6 text-green-500" />
+                    </div>
+                  )}
+                </div>
+              </div>
 
+              {/* Botón Acción RUC */}
+              <div className="pt-2">
+                {!empresa?.rucValidado ? (
+                  <button
+                    onClick={validarRUC}
+                    className="w-full bg-red-600 text-white font-semibold py-2.5 rounded-lg shadow-sm hover:bg-red-700 transition-all active:scale-95 cursor-pointer text-sm"
+                  >
+                    Validar RUC
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMostrarModalPin(true);
+                      setPinInput("");
+                    }}
+                    className="w-full bg-white border border-gray-300 text-gray-700 font-semibold py-2.5 rounded-lg shadow-sm hover:bg-gray-50 transition-all active:scale-95 flex justify-center items-center gap-2 cursor-pointer text-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                    Editar
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {empresa?.razonSocial && (
+              <div className="bg-red-50 p-4 rounded-2xl border border-red-100 flex items-start gap-3 mt-2 animate-pulse-subtle">
+                <div className="bg-red-500 text-white rounded-lg p-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-red-800">{empresa.razonSocial}</p>
+              </div>
+            )}
+          </section>
 
-        {/* Imagen de logo */}
-        <div className="flex items-center gap-6">
-          {logoPreview && (
-            <img
-              src={logoPreview}
-              alt="Logo de empresa"
-              className="h-20 w-20 rounded-full shadow border object-cover"
-            />
-          )}
-          <button
-            onClick={() => inputRef.current.click()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-          >
-            Seleccionar logo
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files[0];
-              if (file) {
-                setLogoFile(file);
-                setLogoPreview(URL.createObjectURL(file));
-              }
-            }}
-          />
-        </div>
+          {/* Sección Logo */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-6 bg-red-500 rounded-full"></div>
+              <h3 className="font-bold text-gray-800 uppercase tracking-wider text-sm">Identidad Visual</h3>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-8 bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-300">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-red-500 rounded-full blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo de empresa"
+                    className="h-32 w-32 rounded-full shadow-2xl border-4 border-white object-cover relative z-10 transition-transform duration-500 group-hover:rotate-6"
+                  />
+                ) : (
+                  <div className="h-32 w-32 rounded-full bg-gray-200 border-4 border-white flex items-center justify-center text-gray-400 relative z-10">
+                    <BuildingOffice2Icon className="h-12 w-12" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1 text-center sm:text-left space-y-4">
+                <h4 className="font-bold text-gray-800 text-lg">Logo Corporativo</h4>
+                <p className="text-gray-500 text-sm max-w-xs">
+                  Se recomienda una imagen en formato PNG o JPG con fondo transparente o blanco. Tamaño máximo sugerido: 500x500px.
+                </p>
+                <div className="flex gap-3 justify-center sm:start">
+                  <button
+                    onClick={() => inputRef.current.click()}
+                    className="bg-white border border-gray-300 text-gray-700 font-medium px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2 active:scale-95 text-sm shadow-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                    </svg>
+                    Elegir imagen
+                  </button>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setLogoFile(file);
+                        setLogoPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
-        <div className="text-end">
-          <button
-            onClick={guardarCambios}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-          >
-            <CheckCircleIcon className="h-5 w-5 inline mr-1" /> Guardar cambios
-          </button>
+          {/* Botón Final */}
+          <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-xs text-gray-400 text-center sm:text-left">
+              * Los cambios se aplicarán en todos los documentos generados a partir de ahora.
+            </p>
+            <button
+              onClick={guardarCambios}
+              className="w-full sm:w-auto bg-red-600 text-white px-6 py-2.5 rounded-lg shadow-sm hover:bg-red-700 transition-all font-semibold flex items-center justify-center gap-2 active:scale-95 cursor-pointer text-sm"
+            >
+              <CheckCircleIcon className="h-5 w-5" /> Guardar todos los cambios
+            </button>
+          </div>
         </div>
       </div>
 
