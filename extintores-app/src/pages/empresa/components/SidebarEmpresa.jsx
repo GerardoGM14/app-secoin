@@ -380,7 +380,7 @@ function SidebarEmpresa({ setSeccionActiva, seccionActiva }) {
       >
         <div className="text-center space-y-1">
           <p className="text-xs text-gray-500 font-medium">Red Secoin v2.0</p>
-          <p className="text-xs text-gray-400">© 2024 Todos los derechos reservados</p>
+          <p className="text-xs text-gray-400">© {new Date().getFullYear()} Todos los derechos reservados</p>
         </div>
       </motion.div>
     </motion.aside>

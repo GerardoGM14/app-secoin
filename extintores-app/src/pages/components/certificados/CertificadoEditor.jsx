@@ -16,7 +16,7 @@ export default function CertificadoEditor() {
     tituloCurso: "Seguridad y Salud Ocupacional en Construcción",
     nota: 18,
     fechaEvaluacion: new Date().toLocaleDateString("es-PE"),
-    idCertificado: "CERT-12345678-2024001",
+    idCertificado: "CERT-12345678-2026001",
   })
 
   const actualizarDato = (campo, valor) => {

@@ -16,9 +16,9 @@ const CertificadosDemo = () => {
     empresa: "Constructora Los Andes S.A.C.",
     tituloCurso: "Seguridad en Trabajo en Alturas",
     nota: 18,
-    fechaEvaluacion: "15 de Diciembre de 2024",
-    idCertificado: "CERT-2024-001234",
-    codigoQR: "https://ejemplo.com/validar/CERT-2024-001234",
+    fechaEvaluacion: "15 de Diciembre de 2026",
+    idCertificado: "CERT-2026-001234",
+    codigoQR: "https://ejemplo.com/validar/CERT-2026-001234",
   }
 
   const renderCertificado = () => {

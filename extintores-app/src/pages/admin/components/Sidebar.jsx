@@ -157,14 +157,14 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                           className="ml-10 mt-1 flex flex-col gap-1 overflow-hidden"
                         >
                           {[
-                            { id: "administracion-cotizaciones", label: "Cotizaciones" },
-                            { id: "administracion-ordenes", label: "Orden de Compra" },
-                            { id: "administracion-guias", label: "Guías de Remisión" },
                             { id: "administracion-actas", label: "Actas de Conformidad" },
-                            { id: "administracion-facturas", label: "Facturas" }, //
-                            { id: "administracion-informes", label: "Informes Detallados" },
+                            { id: "administracion-certificado", label: "Certificado de Operatividad" },
+                            { id: "administracion-cotizaciones", label: "Cotizaciones" },
+                            { id: "administracion-facturas", label: "Facturas" },
                             { id: "administracion-prestamo", label: "Guías de Extintores en Préstamo" },
-                            { id: "administracion-certificado", label: "Certificado de Operatividad" }, //
+                            { id: "administracion-guias", label: "Guías de Remisión" },
+                            { id: "administracion-memoria", label: "Memoria descriptiva" },
+                            { id: "administracion-ordenes", label: "Orden de servicio" },
                           ].map((subItem, subIndex) => (
                             <motion.button
                               key={subIndex}

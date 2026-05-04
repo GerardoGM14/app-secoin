@@ -602,7 +602,7 @@ function TopbarEmpresa() {
 
           {/* Copyright */}
           <div className="hidden lg:block text-right text-xs border-l border-gray-600 pl-4">
-            <p className="text-gray-400">© 2024</p>
+            <p className="text-gray-400">© {new Date().getFullYear()}</p>
             <p
               className="text-gray-300 font-medium cursor-pointer hover:text-white transition-colors duration-200"
               title="Desarrollado por Gerardo Fabian Gonzalez Moreno"

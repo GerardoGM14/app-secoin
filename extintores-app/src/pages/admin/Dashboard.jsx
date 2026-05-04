@@ -404,7 +404,7 @@ function Dashboard() {
           {seccionActiva === "administracion-actas" && (
             <ActasConformidadPanel empresaSeleccionada={empresaSeleccionada} />
           )}
-          {seccionActiva === "administracion-informes" && (
+          {seccionActiva === "administracion-memoria" && (
             <InformesDetalladosPanel empresaSeleccionada={empresaSeleccionada} />
           )}
           {seccionActiva === "administracion-prestamo" && (
