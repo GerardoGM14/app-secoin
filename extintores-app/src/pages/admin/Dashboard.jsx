@@ -76,7 +76,7 @@ function Dashboard() {
       // Buscar por empresaId primero, si no hay resultados, buscar por empresaCorreo
       const qInformes = query(collection(db, "informes"), where("empresaId", "==", empresaSeleccionada.id))
       const snapInformes = await getDocs(qInformes)
-      
+
       // Si no hay resultados con empresaId, intentar con empresaCorreo
       let conteoInformes = snapInformes.size
       if (conteoInformes === 0 && empresaSeleccionada.correo) {
@@ -84,7 +84,7 @@ function Dashboard() {
         const snapInformesCorreo = await getDocs(qInformesCorreo)
         conteoInformes = snapInformesCorreo.size
       }
-      
+
       setConteoInformes(conteoInformes)
 
       // Conteo de Capacitaciones (general)
@@ -118,11 +118,11 @@ function Dashboard() {
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       <Sidebar setSeccionActiva={setSeccionActiva} seccionActiva={seccionActiva} />
-      
+
       {/* Contenedor Principal (Derecho) */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <Topbar />
-        
+
         {/* Área de Contenido con Scroll Independiente */}
         <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
           {/* Encabezado con información de la empresa */}
@@ -337,7 +337,7 @@ function Dashboard() {
                           </div>
                         </div>
                         <div className="h-80">
-                           <AmChartArea data={dataTendencia} />
+                          <AmChartArea data={dataTendencia} />
                         </div>
                       </div>
                     </motion.div>
@@ -354,7 +354,7 @@ function Dashboard() {
                           <p className="text-sm text-gray-500">Proporción de actividades</p>
                         </div>
                         <div className="h-80 flex items-center justify-center">
-                           <AmChartPie data={dataDashboard} />
+                          <AmChartPie data={dataDashboard} />
                         </div>
                       </div>
                     </motion.div>
@@ -376,7 +376,7 @@ function Dashboard() {
                           </div>
                         </div>
                         <div className="h-80">
-                           <AmChartBar data={dataDashboard} />
+                          <AmChartBar data={dataDashboard} />
                         </div>
                       </div>
                     </motion.div>

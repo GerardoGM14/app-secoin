@@ -132,11 +132,10 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                   <motion.div key={index} className="flex flex-col" variants={itemVariants}>
                     <button
                       onClick={() => setSubMenuAdministracion(!subMenuAdministracion)}
-                      className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                        seccionActiva?.includes("administracion")
+                      className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${seccionActiva?.includes("administracion")
                           ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                           : "text-gray-700 hover:bg-red-50 hover:text-red-600"
-                      }`}
+                        }`}
                     >
                       <span className="flex items-center gap-3">
                         <span className="flex items-center justify-center w-7 h-7">{item.icon}</span>
@@ -157,24 +156,23 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                           className="ml-10 mt-1 flex flex-col gap-1 overflow-hidden"
                         >
                           {[
-                            { id: "administracion-actas", label: "Actas de Conformidad" },
-                            { id: "administracion-certificado", label: "Certificado de Operatividad" },
                             { id: "administracion-cotizaciones", label: "Cotizaciones" },
+                            { id: "administracion-ordenes", label: "Orden de Servicio" },
+                            { id: "administracion-guias", label: "Guías de Remision" },
+                            { id: "administracion-prestamo", label: "Guía de Extintores en calidad de prestamo" },
+                            { id: "administracion-actas", label: "Actas de Conformidad" },
                             { id: "administracion-facturas", label: "Facturas" },
-                            { id: "administracion-prestamo", label: "Guías de Extintores en Préstamo" },
-                            { id: "administracion-guias", label: "Guías de Remisión" },
-                            { id: "administracion-memoria", label: "Memoria descriptiva" },
-                            { id: "administracion-ordenes", label: "Orden de servicio" },
+                            { id: "administracion-certificado", label: "Certificado de Operatividad" },
+                            { id: "administracion-memoria", label: "Certificado de Prueba Hidrostática" },
                           ].map((subItem, subIndex) => (
                             <motion.button
                               key={subIndex}
                               variants={subItemVariants}
                               onClick={() => setSeccionActiva(subItem.id)}
-                              className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${
-                                seccionActiva === subItem.id
+                              className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${seccionActiva === subItem.id
                                   ? "bg-red-100 text-red-700 font-medium"
                                   : "text-gray-600 hover:bg-red-50/50 hover:text-red-600"
-                              }`}
+                                }`}
                               whileHover={{ x: 4 }}
                             >
                               {subItem.label}
@@ -199,11 +197,10 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                       setSeccionActiva(item.id)
                     }
                   }}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium cursor-pointer ${
-                    isActive || (item.route && location.pathname === item.route)
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium cursor-pointer ${isActive || (item.route && location.pathname === item.route)
                       ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                       : "text-gray-700 hover:bg-red-50 hover:text-red-600"
-                  }`}
+                    }`}
                   whileHover={!isActive ? { x: 4 } : {}}
                 >
                   <span className="flex items-center justify-center w-7 h-7">{item.icon}</span>
@@ -216,11 +213,10 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
             <motion.div className="flex flex-col mt-1" variants={itemVariants}>
               <button
                 onClick={() => setSubMenuHerramientas(!subMenuHerramientas)}
-                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                  seccionActiva?.includes("herramientas")
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${seccionActiva?.includes("herramientas")
                     ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/20"
                     : "text-gray-700 hover:bg-red-50 hover:text-red-600"
-                }`}
+                  }`}
               >
                 <span className="flex items-center gap-3">
                   <span className="flex items-center justify-center w-7 h-7">
@@ -250,11 +246,10 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
                         key={subIndex}
                         variants={subItemVariants}
                         onClick={() => setSeccionActiva(subItem.id)}
-                        className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${
-                          seccionActiva === subItem.id
+                        className={`text-sm text-left rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer ${seccionActiva === subItem.id
                             ? "bg-red-100 text-red-700 font-medium"
                             : "text-gray-600 hover:bg-red-50/50 hover:text-red-600"
-                        }`}
+                          }`}
                         whileHover={{ x: 4 }}
                       >
                         {subItem.label}
@@ -282,7 +277,7 @@ function Sidebar({ setSeccionActiva, seccionActiva }) {
             </svg>
             <span>Cerrar sesión</span>
           </button>
-          
+
           <div className="text-[10px] text-center text-gray-400 font-medium">
             <span className="opacity-70">© {new Date().getFullYear()} SECOIN • v1.5.0</span>
           </div>
