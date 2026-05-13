@@ -46,6 +46,9 @@ import CertificadoVista from "./pages/components/certificados/CertificadoEditor"
 // Componente de geolocalización global
 import GeolocalizacionTracker from "./components/GeolocalizacionTracker"
 
+// Componente de VersionChecker
+import VersionChecker from "./components/VersionChecker"
+
 function App() {
   const [usuario, setUsuario] = useState(() => {
     const local = localStorage.getItem("usuario")
@@ -56,6 +59,7 @@ function App() {
 
   return (
     <Router>
+      <VersionChecker />
       {/* Componente de geolocalización global */}
       {usuario && <GeolocalizacionTracker />}
       <Routes>

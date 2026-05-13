@@ -25,8 +25,8 @@ export function AmChartArea({ data }) {
     maybeDisposeRoot(chartRef.current);
 
     try {
-      const core = am5.default || am5;
-      const xy = am5xy.default || am5xy;
+      const core = am5;
+      const xy = am5xy;
       const animated = am5themes_Animated.default || am5themes_Animated;
 
       const root = core.Root.new(chartRef.current);
@@ -100,8 +100,8 @@ export function AmChartPie({ data }) {
     maybeDisposeRoot(chartRef.current);
 
     try {
-      const core = am5.default || am5;
-      const percent = am5percent.default || am5percent;
+      const core = am5;
+      const percent = am5percent;
       const animated = am5themes_Animated.default || am5themes_Animated;
 
       const root = core.Root.new(chartRef.current);
@@ -145,8 +145,8 @@ export function AmChartBar({ data }) {
     maybeDisposeRoot(chartRef.current);
 
     try {
-      const core = am5.default || am5;
-      const xy = am5xy.default || am5xy;
+      const core = am5;
+      const xy = am5xy;
       const animated = am5themes_Animated.default || am5themes_Animated;
 
       const root = core.Root.new(chartRef.current);

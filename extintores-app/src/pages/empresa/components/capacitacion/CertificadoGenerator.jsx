@@ -6,8 +6,6 @@ import { db } from "../../../../firebase/firebaseConfig"
 import { collection, addDoc, Timestamp } from "firebase/firestore"
 import Swal from "sweetalert2"
 import QRCode from "qrcode"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid"
 
 function CertificadoGenerator({
@@ -136,6 +134,14 @@ function CertificadoGenerator({
       if (nombreUsuario) {
         nombreUsuario.style.transform = 'translateY(-12px)'
       }
+
+      // Importar librerías dinámicamente
+      const [html2canvasModule, jsPDFModule] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf")
+      ])
+      const html2canvas = html2canvasModule.default || html2canvasModule
+      const { jsPDF } = jsPDFModule
 
       // Capturar el certificado como imagen
       const canvas = await html2canvas(certificadoRef.current, {
